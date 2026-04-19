@@ -117,11 +117,15 @@ function initEventListeners() {
   const logoutBtn = document.getElementById('logoutBtn');
   const startBombBtn = document.getElementById('startBombBtn');
   const backToMainBtn = document.getElementById('backToMainBtn');
+  const prevPageBtn = document.getElementById('prevPage');
+  const nextPageBtn = document.getElementById('nextPage');
 
   if (loginBtn) loginBtn.addEventListener('click', loginStudent);
   if (logoutBtn) logoutBtn.addEventListener('click', logoutStudent);
   if (startBombBtn) startBombBtn.addEventListener('click', startGame);
   if (backToMainBtn) backToMainBtn.addEventListener('click', backToMain);
+  if (prevPageBtn) prevPageBtn.addEventListener('click', () => flipPage(-1));
+  if (nextPageBtn) nextPageBtn.addEventListener('click', () => flipPage(1));
 
   document.addEventListener('keydown', (event) => {
     if (!document.getElementById('game')?.classList.contains('active')) return;
