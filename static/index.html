@@ -134,6 +134,10 @@
             font-size: 14px;
         }
         
+        .difficulty-select[multiple] {
+            height: 120px;
+        }
+        
         /* CHAT PANEL */
         #chatPanel {
             grid-column: 2;
@@ -1181,13 +1185,17 @@
                 <select id="gameSubject" class="difficulty-select">
                     <!-- Options will be populated by JavaScript based on grade -->
                 </select>
+                <label for="gameTopics">Topics:</label>
+                <select id="gameTopics" class="difficulty-select" multiple>
+                    <!-- Options will be populated by JavaScript based on selected subject -->
+                </select>
                 <label for="moduleCount">Number of Bomb Modules:</label>
                 <select id="moduleCount" class="difficulty-select">
+                    <option value="1">1 Module</option>
+                    <option value="2">2 Modules</option>
                     <option value="3">3 Modules</option>
                     <option value="4">4 Modules</option>
                     <option value="5" selected>5 Modules</option>
-                    <option value="6">6 Modules</option>
-                    <option value="7">7 Modules</option>
                 </select>
                 <select id="gameDifficulty" class="difficulty-select">
                     <option value="Easy">Easy</option>

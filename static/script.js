@@ -211,6 +211,35 @@ function populateSubjectSelect(grade) {
         option.textContent = subject;
         subjectSelect.appendChild(option);
     });
+    
+    // Populate topics when subject changes
+    subjectSelect.addEventListener('change', function() {
+        populateTopicsSelect(this.value);
+    });
+    
+    // Initially populate topics for the first subject
+    if (subjects.length > 0) {
+        populateTopicsSelect(subjects[0]);
+    }
+}
+
+function populateTopicsSelect(subject) {
+    const topicsSelect = document.getElementById('gameTopics');
+    topicsSelect.innerHTML = ''; // Clear existing options
+    
+    // Define topics by grade
+    const topicsByGrade = {
+        "Grade 5": ["arithmetic", "fractions", "algebra", "geometry"],
+        "Grade 6": ["arithmetic", "fractions", "algebra", "geometry"]
+    };
+    
+    const topics = topicsByGrade[subject] || [];
+    topics.forEach(topic => {
+        const option = document.createElement('option');
+        option.value = topic;
+        option.textContent = topic.charAt(0).toUpperCase() + topic.slice(1); // Capitalize first letter
+        topicsSelect.appendChild(option);
+    });
 }
 
 function logoutStudent() {
@@ -232,6 +261,7 @@ function logoutStudent() {
 async function startGame() {
     const difficulty = currentStudent.grade; // Use grade instead of difficulty level
     const subject = document.getElementById('gameSubject').value;
+    const selectedTopics = Array.from(document.getElementById('gameTopics').selectedOptions).map(option => option.value);
     const moduleCount = parseInt(document.getElementById('moduleCount').value, 10);
     
     try {
@@ -241,6 +271,7 @@ async function startGame() {
             body: JSON.stringify({ 
                 difficulty: difficulty,
                 subject: subject,
+                topics: selectedTopics,
                 num_questions: moduleCount,
                 module_count: moduleCount,
                 student_id: currentStudent.name

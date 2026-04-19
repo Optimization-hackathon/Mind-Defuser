@@ -148,6 +148,7 @@ def get_questions():
     difficulty_grade = data['difficulty']
     student_id = data.get('student_id', 'unknown')
     num_questions = data.get('num_questions', 5)
+    selected_topics = data.get('topics', [])  # Get selected topics
     
     if difficulty_grade not in questions:
         return jsonify({"error": "Difficulty not found"}), 404
@@ -159,19 +160,23 @@ def get_questions():
     # Gamspy Model: Optimal difficulty selection
     optimal_difficulty = optimize_difficulty(accuracy)
     
-    # Get questions at optimal difficulty
+    # Get questions at optimal difficulty, filtered by selected topics
     all_q = []
-    for topic in questions[difficulty_grade]:
-        for q in questions[difficulty_grade][topic]:
-            if q.get('difficulty', 2) == optimal_difficulty:
-                all_q.append(q)
+    topics_to_use = selected_topics if selected_topics else list(questions[difficulty_grade].keys())
+    
+    for topic in topics_to_use:
+        if topic in questions[difficulty_grade]:
+            for q in questions[difficulty_grade][topic]:
+                if q.get('difficulty', 2) == optimal_difficulty:
+                    all_q.append(q)
     
     # If not enough questions at optimal level, expand search
     if len(all_q) < num_questions:
-        for topic in questions[difficulty_grade]:
-            for q in questions[difficulty_grade][topic]:
-                if q not in all_q:
-                    all_q.append(q)
+        for topic in topics_to_use:
+            if topic in questions[difficulty_grade]:
+                for q in questions[difficulty_grade][topic]:
+                    if q not in all_q:
+                        all_q.append(q)
     
     selected = random.sample(all_q, min(num_questions, len(all_q)))
     return jsonify({
