@@ -313,32 +313,42 @@ function backToMain() {
 }
 
 // ============ CHAT FUNCTIONS ============
-function sendChatMessage() {
+async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
     
     if (!message) return;
     
-    // Add user message to chat
     addUserMessage(message);
     input.value = '';
-    
-    // Simulate AI response (in real implementation, this would call an API)
-    setTimeout(() => {
-        const responses = [
-            "Bu soruyu çözmek için önce problemi dikkatli oku. Hangi matematik konsepti kullanılıyor?",
-            "Güzel soru! Bir önceki cevabını gözden geçir. Hesaplamalarında bir hata olmuş olabilir.",
-            "Devam et, seni çok iyi yapıyor görüyorum! Zorlanıyorsan, sorunun temel kavramını düşün.",
-            "Başka bir yaklaşım denemeye çalış. Resmi adım adım çız, yardımcı olabilir!",
-            "Mükemmel! Konsepti çok iyi anlamışsın. Daha karmaşık soruları dene!",
-            "Hata yapmak normal bir parça! Neden yanlış olduğunu anlamaya çalış, bu önemli.",
-            "Bu konuda iyi ilerliyorsun. Pratik yapıp pratik yap, her şey zamanla gelecek!",
-            "Eğer takılıyorsan, temel adımları gözden geçirmeyi dene. Bazen basit şeyler atlanabiliyor."
-        ];
-        
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-        addAIMessage(randomResponse);
-    }, 800);
+    addAIMessage('AI yanıtı hazırlanıyor...');
+
+    try {
+        const response = await fetch('/ai', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prompt: message })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'AI yanıtı alınamadı.');
+        }
+
+        const chatMessages = document.getElementById('chatMessages');
+        const pendingMessages = chatMessages.querySelectorAll('.ai-message');
+        const lastPending = pendingMessages[pendingMessages.length - 1];
+        if (lastPending && lastPending.textContent === 'AI yanıtı hazırlanıyor...') {
+            lastPending.textContent = data.response;
+        } else {
+            addAIMessage(data.response);
+        }
+    } catch (error) {
+        console.error('Chat error:', error);
+        addAIMessage('Üzgünüm, AI asistanına bağlanırken bir sorun oldu. Lütfen tekrar dene.');
+    }
 }
 
 function addUserMessage(message) {
