@@ -1024,6 +1024,31 @@
             font-style: italic;
         }
         
+        /* MODULE STATUS ITEMS */
+        .module-status-item {
+            cursor: pointer;
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid transparent;
+        }
+        
+        .module-status-item:hover {
+            background: rgba(0, 255, 0, 0.2);
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            transform: translateX(5px);
+        }
+        
+        .module-status-item.active {
+            background: rgba(0, 255, 0, 0.4);
+            border-color: #00ff00;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
+            font-weight: bold;
+        }
+        
         /* QUESTION DISPLAY */
         #question {
             font-size: 20px;

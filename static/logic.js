@@ -281,6 +281,7 @@ function flipPage(direction) {
   if (nextPage < 0 || nextPage >= manualState.totalPages) return;
   manualState.currentPage = nextPage;
   updateManualDisplay();
+  updateStatusPanel();
 }
 
 function updateManualDisplay() {
@@ -683,13 +684,35 @@ function logError(message) {
 function updateStatusPanel() {
   const statusBox = document.getElementById('moduleStatus');
   if (!statusBox) return;
-  const states = Object.entries(moduleState).map(([moduleId, state]) => {
+  
+  // Clear existing content
+  statusBox.innerHTML = '<strong>Module Status</strong><br>';
+  
+  // Create clickable module items
+  Object.entries(moduleState).forEach(([moduleId, state], index) => {
     const page = manualPages.find((pageItem) => pageItem.id === moduleId);
     const label = page ? page.title : moduleId;
     const mark = state.solved ? '✅' : state.unlocked ? '🟡' : '🔴';
-    return `${mark} ${label}`;
+    
+    // Create module item element
+    const moduleItem = document.createElement('div');
+    moduleItem.className = 'module-status-item';
+    moduleItem.setAttribute('data-module-index', index);
+    if (manualState.currentPage === index) {
+      moduleItem.classList.add('active');
+    }
+    
+    moduleItem.innerHTML = `${mark} ${label}`;
+    
+    // Add click event listener
+    moduleItem.addEventListener('click', () => {
+      manualState.currentPage = index;
+      updateManualDisplay();
+      updateStatusPanel(); // Re-render to update active state
+    });
+    
+    statusBox.appendChild(moduleItem);
   });
-  statusBox.innerHTML = `<strong>Module Status</strong><br>${states.join('<br>')}`;
 }
 
 function checkAllModulesSolved() {

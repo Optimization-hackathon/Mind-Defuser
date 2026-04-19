@@ -545,6 +545,7 @@ function flipPage(direction) {
     if (newPage >= 0 && newPage < manualState.totalPages) {
         manualState.currentPage = newPage;
         updateManualDisplay();
+        updateStatusPanel();
     }
 }
 
