@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind Defuser</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        /* LOGIN SCREEN */
+        #login {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        #login h1 { text-align: center; margin-bottom: 30px; color: #333; }
+        #login label { display: block; margin: 15px 0 5px 0; color: #555; font-weight: bold; }
+        #login select, #login input { width: 100%; padding: 12px; margin-bottom: 20px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; }
+        #login select:focus, #login input:focus { outline: none; border-color: #667eea; }
+        #loginBtn { 
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        #loginBtn:hover { transform: translateY(-2px); }
+        
+        /* MAIN INTERFACE */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+            display: none;
+        }
+        .container.active { display: grid; }
+        
+        /* HEADER */
+        .header {
+            grid-column: 1 / -1;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { color: #333; }
+        .logout-btn {
+            padding: 10px 20px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        /* PANELS */
+        .panel {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .panel-body {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        /* START BOMB PANEL */
+        #startBombPanel {
+            grid-column: 1;
+            grid-row: 2;
+        }
+        
+        .bomb-icon {
+            font-size: 80px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .start-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+        
+        .start-btn:hover { transform: scale(1.05); }
+        
+        .difficulty-select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        /* CHAT PANEL */
+        #chatPanel {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        
+        .chat-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        
+        .chat-message {
+            padding: 12px 15px;
+            border-radius: 10px;
+            max-width: 90%;
+            word-wrap: break-word;
+        }
+        
+        .ai-message {
+            background: #f0f0f0;
+            align-self: flex-start;
+            border-left: 4px solid #667eea;
+        }
+        
+        .user-message {
+            background: #667eea;
+            color: white;
+            align-self: flex-end;
+        }
+        
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .chat-input-area button {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        /* PROGRESS PANEL */
+        #progressPanel {
+            grid-column: 3;
+            grid-row: 2;
+        }
+        
+        .progress-item {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .progress-item:last-child {
+            border-bottom: none;
+        }
+        
+        .progress-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+        
+        .stats-box {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .stats-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stats-label {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        /* GAME SCREEN */
+        #game {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: none;
+        }
+        
+        #game.active { display: block; }
+        
+        #bomb { font-size: 50px; margin: 20px; text-align: center; }
+        .module { display: inline-block; width: 100px; height: 100px; background: red; margin: 10px; border-radius: 50%; cursor: pointer; }
+        .defused { background: green; }
+        #question { font-size: 24px; margin: 20px; }
+        #answer { width: 200px; padding: 10px; font-size: 18px; }
+        #submit { padding: 10px 20px; font-size: 18px; }
+        #result { margin: 20px; font-size: 20px; }
+        
+        #play { display: none; }
+        #play.active { display: block; }
+        
+        #dashboard { display: none; }
+        #dashboard.active { display: block; }
+        
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .panel {
+                grid-column: 1 !important;
+            }
+            .header {
+                grid-column: 1 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- LOGIN SCREEN -->
+    <div id="login">
+        <h1>🎮 Mind Defuser</h1>
+        <label for="studentName">Student Name:</label>
+        <input type="text" id="studentName" placeholder="Enter your name">
+        <label for="loginDifficulty">Select Grade:</label>
+        <select id="loginDifficulty">
+            <option value="Grade 1">Grade 1</option>
+            <option value="Grade 2">Grade 2</option>
+            <option value="Grade 3">Grade 3</option>
+            <option value="Grade 4">Grade 4</option>
+            <option value="Grade 5">Grade 5</option>
+            <option value="Grade 6">Grade 6</option>
+            <option value="Grade 7">Grade 7</option>
+            <option value="Grade 8">Grade 8</option>
+            <option value="Grade 9">Grade 9</option>
+            <option value="Grade 10">Grade 10</option>
+            <option value="Grade 11">Grade 11</option>
+            <option value="Grade 12">Grade 12</option>
+        </select>
+        <button id="loginBtn">Login</button>
+    </div>
+    
+    <!-- MAIN INTERFACE -->
+    <div class="container" id="mainInterface">
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <h1>🎮 Mind Defuser</h1>
+                <p id="welcomeText"></p>
+            </div>
+            <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+        
+        <!-- START BOMB PANEL -->
+        <div class="panel" id="startBombPanel">
+            <div class="panel-header">🚀 Start Bomb Defusing</div>
+            <div class="panel-body" style="text-align: center;">
+                <div class="bomb-icon">💣</div>
+                <p style="color: #666; margin-bottom: 15px;">Ready to defuse the bomb?</p>
+                <label for="gameSubject">Select Subject:</label>
+                <select id="gameSubject" class="difficulty-select">
+                    <!-- Options will be populated by JavaScript based on grade -->
+                </select>
+                <label for="moduleCount">Number of Bomb Modules:</label>
+                <select id="moduleCount" class="difficulty-select">
+                    <option value="3">3 Modules</option>
+                    <option value="4">4 Modules</option>
+                    <option value="5" selected>5 Modules</option>
+                    <option value="6">6 Modules</option>
+                    <option value="7">7 Modules</option>
+                </select>
+                <select id="gameDifficulty" class="difficulty-select">
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                </select>
+                <button class="start-btn" id="startBombBtn">Start Bomb Defusing</button>
+            </div>
+        </div>
+        
+        <!-- CHAT PANEL -->
+        <div class="panel" id="chatPanel">
+            <div class="panel-header">💬 AI Assistant</div>
+            <div class="panel-body">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message ai-message">
+                        Merhaba! Ben senin AI asistanım. Bomba çözmeye çalışırken sana yardımcı olmak için buradayım. Herhangi bir sorun varsa bana sor! 👋
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" placeholder="Ask for help or feedback...">
+                    <button id="sendChatBtn">Send</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PROGRESS PANEL -->
+        <div class="panel" id="progressPanel">
+            <div class="panel-header">📊 My Progress</div>
+            <div class="panel-body">
+                <div class="progress-item">
+                    <div class="progress-label">Overall Progress</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="overallProgress" style="width: 45%;"></div>
+                    </div>
+                </div>
+                
+                <div class="stats-box">
+                    <div class="stats-value" id="correctAnswers">0</div>
+                    <div class="stats-label">Correct Answers</div>
+                </div>
+                
+                <div class="stats-box">
+                    <div class="stats-value" id="accuracy">0%</div>
+                    <div class="stats-label">Accuracy</div>
+                </div>
+                
+                <div class="stats-box">
+                    <div class="stats-value" id="gamesPlayed">0</div>
+                    <div class="stats-label">Games Played</div>
+                </div>
+                
+                <div class="progress-item">
+                    <div class="progress-label">Topics Mastered</div>
+                    <div id="topicsList" style="font-size: 12px; color: #999;">
+                        No topics mastered yet
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- GAME SCREEN -->
+    <div id="game">
+        <button style="margin-bottom: 10px;" id="backToMainBtn">← Back to Main</button>
+        <h1>🎮 Mind Defuser</h1>
+        <div id="play">
+            <div id="bomb">💣</div>
+            <div id="modules"></div>
+            <div id="question"></div>
+            <input type="text" id="answer" placeholder="Your answer">
+            <button id="submit">Submit</button>
+            <div id="result"></div>
+        </div>
+        <div id="dashboard">
+            <h2>Post-Game Dashboard</h2>
+            <p id="score"></p>
+            <p id="mistakes"></p>
+            <p id="weak_topics"></p>
+            <p id="study_plan"></p>
+            <button id="playAgain">Play Again</button>
+        </div>
+    </div>
+    
+    <script src="static/script.js"></script>
+</body>
+</html>

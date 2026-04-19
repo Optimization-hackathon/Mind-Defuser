@@ -1,0 +1,72 @@
+{
+    "Grade 5": {
+        "arithmetic": [
+            {
+                "question": "What is 5 + 3?",
+                "answer": "8",
+                "topic": "arithmetic"
+            },
+            {
+                "question": "What is 10 - 4?",
+                "answer": "6",
+                "topic": "arithmetic"
+            }
+        ],
+        "fractions": [
+            {
+                "question": "What is 1/2 + 1/2?",
+                "answer": "1",
+                "topic": "fractions"
+            },
+            {
+                "question": "Simplify 2/4",
+                "answer": "1/2",
+                "topic": "fractions"
+            }
+        ],
+        "algebra": [
+            {
+                "question": "Solve x + 2 = 5",
+                "answer": "3",
+                "topic": "algebra"
+            }
+        ],
+        "geometry": [
+            {
+                "question": "How many sides does a triangle have?",
+                "answer": "3",
+                "topic": "geometry"
+            }
+        ]
+    },
+    "Grade 6": {
+        "arithmetic": [
+            {
+                "question": "What is 12 * 7?",
+                "answer": "84",
+                "topic": "arithmetic"
+            }
+        ],
+        "fractions": [
+            {
+                "question": "What is 3/4 - 1/4?",
+                "answer": "1/2",
+                "topic": "fractions"
+            }
+        ],
+        "algebra": [
+            {
+                "question": "Solve 2x = 10",
+                "answer": "5",
+                "topic": "algebra"
+            }
+        ],
+        "geometry": [
+            {
+                "question": "Area of rectangle 5x3",
+                "answer": "15",
+                "topic": "geometry"
+            }
+        ]
+    }
+}
