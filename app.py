@@ -6,8 +6,8 @@ import io
 from openai import OpenAI
 from flask import request, jsonify
 from datetime import datetime, timedelta
-import gamspy as gp
-import numpy as np
+# import gamspy as gp
+# import numpy as np
 from collections import defaultdict
 import openai
 
@@ -306,28 +306,12 @@ def calculate_score(answers):
 # ============ GAMSPY MODEL 1: UYARLANABILIR ZORLUK ============
 def optimize_difficulty(accuracy):
     """
-    Gamspy kullanarak optimal zorluk seviyesini seçer.
+    Simple rule-based difficulty optimization.
     
-    Amaç: 
-    - Accuracy %70 ise zorluk arttır (challenge zone - ZPD)
-    - Accuracy %40'ın altında ise zorluk azalt (frustration zone)
-    - Accuracy %40-70 arası ideal bölge
-    
-    Gamspy ile linear programlama: minimize |optimal_accuracy - current_accuracy|
+    - Accuracy < 50%: Easy (1)
+    - Accuracy 50-70%: Medium (2) 
+    - Accuracy > 70%: Hard (3)
     """
-    m = gp.Container()
-    
-    # Karar değişkeni: Zorluk seviyesi (1=Easy, 2=Medium, 3=Hard)
-    difficulty_level = gp.Variable(m, name="difficulty", type="integer", domain=[1, 2, 3])
-    
-    # Parametreler
-    target_accuracy = gp.Parameter(m, name="target_accuracy", records=0.65)
-    current_accuracy_param = gp.Parameter(m, name="current_accuracy", records=accuracy)
-    
-    # Amaç: Sınıflandırma
-    # Eğer accuracy < 0.5 ise zorluk 1 (easy)
-    # Eğer 0.5 <= accuracy < 0.7 ise zorluk 2 (medium)
-    # Eğer accuracy >= 0.7 ise zorluk 3 (hard)
     if accuracy < 0.5:
         return 1
     elif accuracy < 0.7:
@@ -339,182 +323,39 @@ def optimize_difficulty(accuracy):
 # ============ GAMSPY MODEL 2: KONU OPTİMİZASYONU ============
 def optimize_study_plan_gamspy(mistake_topics, available_time=60):
     """
-    Gamspy kullanarak çalışma zamanını konulara optimal dağıtır.
-    
-    Amaç: 
-    - Hata yapılan konulara daha fazla zaman ayır
-    - Toplam zamanı optimize et
-    - Her konuya minimum zaman garantisi
-    
-    Model: Linear Programming
-    Maximize: Weighted time allocation (hatalar ağırlık olarak)
-    Subject to:
-    - Sum of times = available_time
-    - time[topic] >= minimum_time
-    - time[topic] <= maximum_time
+    Simple rule-based study plan optimization.
+    Allocate more time to topics with more mistakes.
     """
-    
     if not mistake_topics:
-        return {"message": "No mistakes - no study plan needed"}
-    
-    m = gp.Container()
-    
-    topics = list(mistake_topics.keys())
-    n_topics = len(topics)
-    
-    # Set indices
-    topics_set = gp.Set(m, "topics", records=topics)
-    
-    # Decision variables: time allocation per topic (in minutes)
-    time_alloc = gp.Variable(m, name="time_alloc", domain=topics_set, type="positive")
-    
-    # Parameters
-    mistake_weights = gp.Parameter(m, name="mistake_weights", domain=topics_set)
-    for i, t in enumerate(topics):
-        mistake_weights[t] = mistake_topics[t]
-    
-    min_time_per_topic = gp.Parameter(m, name="min_time", records=5)  # Min 5 min per topic
-    max_time_per_topic = gp.Parameter(m, name="max_time", records=available_time / n_topics * 2)  # Max 2x average
-    
-    # Objective: Maximize weighted study time (prioritize high-mistake topics)
-    # Formulation: Sum(mistake_weight[t] * time_alloc[t])
-    obj = gp.Sum(mistake_weights[t] * time_alloc[t] for t in topics)
-    
-    # Constraints
-    constraints = []
-    
-    # Constraint 1: Total study time equals available_time
-    total_time_eq = gp.Equation(m, name="total_time_constraint", domain=None)
-    total_time_eq[...] = gp.Sum(time_alloc[t] for t in topics) == available_time
-    constraints.append(total_time_eq)
-    
-    # Constraint 2: Minimum time per topic
-    min_time_con = gp.Equation(m, name="min_time_constraint", domain=topics_set)
-    min_time_con[t] = time_alloc[t] >= min_time_per_topic
-    constraints.append(min_time_con)
-    
-    # Constraint 3: Maximum time per topic  
-    max_time_con = gp.Equation(m, name="max_time_constraint", domain=topics_set)
-    max_time_con[t] = time_alloc[t] <= max_time_per_topic
-    constraints.append(max_time_con)
-    
-    # Create and solve model
-    model = gp.Model(
-        m,
-        name="study_plan_optimization",
-        equations=constraints,
-        objective=obj,
-        sense="max"
-    )
-    
-    try:
-        model.solve(solver="highs", output=io.StringIO())
-    except:
-        # Fallback if solver fails
-        pass
-    
-    # Extract results
+        return {}
+
+    total_mistakes = sum(mistake_topics.values())
     plan = {}
-    for t in topics:
-        allocated_time = float(time_alloc[t].toValue()) if hasattr(time_alloc[t], 'toValue') else available_time / n_topics
-        plan[t] = max(0, allocated_time)
-    
-    # Normalize to ensure sum equals available_time
-    total = sum(plan.values())
-    if total > 0:
-        plan = {k: v * available_time / total for k, v in plan.items()}
-    
-    return {topic: round(time, 2) for topic, time in plan.items()}
 
+    for topic, mistakes in mistake_topics.items():
+        # Allocate time proportional to mistakes
+        time_allocation = (mistakes / total_mistakes) * available_time
+        plan[topic] = max(5, round(time_allocation, 1))  # Minimum 5 minutes
 
+    return plan
 # ============ GAMSPY MODEL 3: PERİYODİKLİK PLANLAMA (SPACED REPETITION) ============
 def optimize_repetition_schedule(mistake_topics, difficulty):
     """
-    Gamspy kullanarak Spaced Repetition takvimi oluşturur.
-    
-    Amaç:
-    - Ebbinghaus'un Forgetting Curve modeline göre tekrar planı
-    - Hatırlama gücünü maksimize et
-    - Kaynak verimliliğini sağla
-    
-    Model: Non-linear optimization
-    Tekrar zamanları: 1 gün, 3 gün, 1 hafta, 2 hafta, 1 ay (optimal)
+    Simple spaced repetition schedule based on Ebbinghaus forgetting curve.
     """
-    
-    m = gp.Container()
-    
-    topics = list(mistake_topics.keys())
-    
-    # Set indices
-    topics_set = gp.Set(m, "topics", records=topics)
-    intervals = gp.Set(m, "intervals", records=["day1", "day3", "week1", "week2", "month1"])
-    
-    # Decision: Hangi konuyu hangi günde tekrar et?
-    repetition_plan = gp.Variable(m, name="rep_plan", domain=[topics_set, intervals], type="binary")
-    
-    # Parameters
-    mistake_severity = gp.Parameter(m, name="severity", domain=topics_set)
-    interval_days = gp.Parameter(m, name="interval_days", domain=intervals)
-    
-    for i, t in enumerate(topics):
-        # Severity: Normalize mistake count
-        total_mistakes = sum(mistake_topics.values())
-        mistake_severity[t] = mistake_topics[t] / total_mistakes if total_mistakes > 0 else 0.5
-    
-    # Interval mappings
-    interval_records = [("day1", 1), ("day3", 3), ("week1", 7), ("week2", 14), ("month1", 30)]
-    for interval_name, days in interval_records:
-        interval_days[interval_name] = days
-    
-    # Objective: Maximize retention through optimal spacing
-    # Ebbinghaus model: Retention = e^(-t/S) where S is strength, t is time
-    # Simplified: Minimize average time to next forgetting
-    obj = gp.Sum(
-        repetition_plan[t, interval] * (1 / interval_days[interval]) * mistake_severity[t]
-        for t in topics
-        for interval in intervals
-    )
-    
-    # Constraint: Her konu en az 1 kez tekrar edilsin
-    constraints = []
-    min_reps = gp.Equation(m, name="min_repetitions", domain=topics_set)
-    min_reps[t] = gp.Sum(repetition_plan[t, interval] for interval in intervals) >= 1
-    constraints.append(min_reps)
-    
-    # Constraint: Maksimum 1 interval per topic (basit versiyon)
-    max_one_interval = gp.Equation(m, name="max_one_interval", domain=topics_set)
-    max_one_interval[t] = gp.Sum(repetition_plan[t, interval] for interval in intervals) <= 1
-    constraints.append(max_one_interval)
-    
-    # Create model
-    model = gp.Model(
-        m,
-        name="repetition_schedule",
-        equations=constraints,
-        objective=obj,
-        sense="max"
-    )
-    
-    try:
-        model.solve(solver="highs", output=io.StringIO())
-    except:
-        pass
-    
-    # Generate schedule
     schedule = {}
-    interval_to_days = {"day1": 1, "day3": 3, "week1": 7, "week2": 14, "month1": 30}
-    
-    for t in topics:
-        schedule[t] = []
-        for interval in intervals:
-            if float(repetition_plan[t, interval].toValue()) > 0.5:
-                days_until = interval_to_days[interval.toValue()] if hasattr(interval, 'toValue') else interval_to_days.get(str(interval), 1)
-                schedule[t].append({
-                    "interval": interval,
-                    "days_until_review": days_until,
-                    "review_date": (datetime.now() + timedelta(days=days_until)).strftime("%Y-%m-%d")
-                })
-    
+    intervals = [1, 3, 7, 14, 30]  # days
+
+    for topic in mistake_topics.keys():
+        schedule[topic] = []
+        for i, days in enumerate(intervals):
+            review_date = (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
+            schedule[topic].append({
+                "interval": f"day{days}" if days < 7 else f"week{days//7}" if days < 30 else "month1",
+                "review_date": review_date,
+                "days_until_review": days
+            })
+
     return schedule
 
 if __name__ == '__main__':

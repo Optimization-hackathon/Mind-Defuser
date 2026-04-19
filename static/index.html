@@ -830,6 +830,196 @@
             font-size: 14px;
         }
         
+        /* INTERACTIVE MANUAL / BOOKLET */
+        .manual-container {
+            width: 90%;
+            max-width: 1200px;
+            position: relative;
+            margin-top: 20px;
+        }
+        
+        .manual-book {
+            width: 100%;
+            height: 400px;
+            position: relative;
+            perspective: 1500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .manual-pages {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s;
+        }
+        
+        .manual-page {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(135deg, #f5f5f0 0%, #e8e8e0 50%, #d5d5c0 100%);
+            border: 2px solid #8b4513;
+            box-shadow: 
+                0 0 20px rgba(0, 0, 0, 0.3),
+                inset 0 0 30px rgba(139, 69, 19, 0.1);
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            font-family: 'Times New Roman', serif;
+            color: #2c1810;
+            overflow-y: auto;
+        }
+        
+        .manual-page.left-page {
+            left: 0;
+            border-right: 1px solid #654321;
+            border-radius: 10px 0 0 10px;
+            transform-origin: right center;
+        }
+        
+        .manual-page.right-page {
+            right: 0;
+            border-left: 1px solid #654321;
+            border-radius: 0 10px 10px 0;
+            transform-origin: left center;
+        }
+        
+        .manual-page-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .manual-question {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid #8b4513;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .question-number {
+            font-weight: bold;
+            color: #8b4513;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .question-text {
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+        
+        .question-answer {
+            background: #f0f8ff;
+            border: 1px solid #4682b4;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #2e4a62;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .question-answer:hover {
+            background: #e6f3ff;
+            box-shadow: 0 0 10px rgba(70, 130, 180, 0.3);
+        }
+        
+        .question-answer.completed {
+            background: #e8f5e8;
+            border-color: #32cd32;
+            color: #228b22;
+        }
+        
+        .manual-page-number {
+            position: absolute;
+            bottom: 15px;
+            right: 20px;
+            font-size: 12px;
+            color: #654321;
+            font-style: italic;
+        }
+        
+        .manual-page-number.left {
+            right: auto;
+            left: 20px;
+        }
+        
+        /* PAGE FLIPPING CONTROLS */
+        .page-controls {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 20px;
+            pointer-events: none;
+        }
+        
+        .page-control {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #8b4513 0%, #654321 100%);
+            border: 2px solid #654321;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #f5f5f0;
+            transition: all 0.3s;
+            pointer-events: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .page-control:hover {
+            background: linear-gradient(135deg, #a0522d 0%, #8b4513 100%);
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .page-control:active {
+            transform: scale(0.95);
+        }
+        
+        .page-control.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        /* MANUAL HEADER */
+        .manual-header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+        }
+        
+        .manual-header h2 {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+            letter-spacing: 2px;
+        }
+        
+        .manual-header p {
+            font-size: 14px;
+            color: #ff6b6b;
+            margin: 8px 0 0 0;
+            font-style: italic;
+        }
+        
         /* QUESTION DISPLAY */
         #question {
             font-size: 20px;
@@ -899,6 +1089,50 @@
             .header {
                 grid-column: 1 !important;
             }
+        }
+        
+        /* MODULE ACTIVATION NOTIFICATIONS */
+        .module-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+            color: #000;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
+            z-index: 1000;
+            animation: notificationPulse 2s ease-in-out;
+            border: 3px solid #00aa00;
+        }
+        
+        @keyframes notificationPulse {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            80% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+        }
+        
+        /* SELECTED ANSWER STYLES */
+        .question-answer.selected {
+            background: #4169e1 !important;
+            color: #fff !important;
+            border-color: #0000ff !important;
+            box-shadow: 0 0 15px rgba(65, 105, 225, 0.6) !important;
+        }
+        
+        /* ACTIVATED MODULE STYLES */
+        .module.activated {
+            animation: moduleActivated 0.5s ease-in-out;
+        }
+        
+        @keyframes moduleActivated {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -1059,14 +1293,15 @@
                             </div>
                         </div>
                         
-                        <!-- MODULE 3: ABORT BUTTON -->
-                        <div class="module abort-module">
+                        <!-- MODULE 3: RED BUTTON -->
+                        <div class="module abort-module" id="buttonModule">
                             <div class="led led-red"></div>
                             <div class="led led-green"></div>
                             <div class="module-overlay"></div>
-                            <div class="abort-button-inner" onclick="handleAbortClick()">
-                                <div class="abort-text">ABORT</div>
+                            <div class="abort-button-inner" id="redActionButton">
+                                <div class="abort-text" id="redButtonLabel">HOLD</div>
                             </div>
+                            <div id="redButtonStatus" style="margin-top: 12px; color: #fff; font-size: 14px; text-align: center;">Hold until the key digit appears in the timer.</div>
                         </div>
                         
                         <!-- MODULE 4: SYMBOL KEYPAD -->
@@ -1087,10 +1322,16 @@
                         <div class="module" id="dialModule">
                             <div class="led led-green"></div>
                             <div class="module-overlay"></div>
-                            <div class="module-content">
+                            <div class="module-content" style="gap: 18px;">
                                 <div class="rotary-dial">
                                     <div class="rotary-pointer" id="rotaryPointer"></div>
                                 </div>
+                                <div id="dialInstruction" style="color: #00ff99; font-size: 14px;">Enter the manual answer and reveal the hidden dial moves.</div>
+                                <div id="dialControls" style="display: flex; gap: 12px; justify-content: center; width: 100%;">
+                                    <button class="start-btn" id="dialLeft" style="background: #1e90ff; width: 100px;">◄ Left</button>
+                                    <button class="start-btn" id="dialRight" style="background: #1e90ff; width: 100px;">Right ►</button>
+                                </div>
+                                <div id="dialStatus" style="font-size: 14px; color: #fff;">Dial moves remaining: 5</div>
                             </div>
                         </div>
                         
@@ -1108,14 +1349,29 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- QUESTION AND INPUT PANEL -->
-                    <div class="bottom-info">
-                        <h3>🔧 PUZZLE MODULE</h3>
-                        <div id="question" style="margin: 15px 0;"></div>
-                        <input type="text" id="answer" placeholder="Enter solution...">
-                        <button id="submit">SUBMIT SOLUTION</button>
-                        <div id="result" style="margin-top: 15px;"></div>
+                </div>
+                
+                <!-- INTERACTIVE MANUAL / BOOKLET -->
+                <div class="manual-container">
+                    <div class="manual-header">
+                        <h2>📖 BOMB DEFUSAL MANUAL</h2>
+                        <p>Use arrow keys or the buttons to turn pages. Each page has one module instruction.</p>
+                    </div>
+                    <div class="manual-book">
+                        <div class="page-controls">
+                            <div class="page-control" id="prevPage" onclick="flipPage(-1)">‹</div>
+                            <div class="page-control" id="nextPage" onclick="flipPage(1)">›</div>
+                        </div>
+                        <div class="manual-pages" id="manualPages">
+                            <div class="manual-page left-page">
+                                <div class="manual-page-content" id="manualPageContent"></div>
+                                <div class="manual-page-number" id="manualPageNumber"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="manual-status" style="margin-top: 20px; display: grid; gap: 12px;">
+                        <div id="moduleStatus" style="background: rgba(0,0,0,0.6); border: 1px solid #00ff00; border-radius: 10px; padding: 16px; color: #00ff99; font-family: 'Courier New', monospace;"></div>
+                        <div id="errorLog" style="background: rgba(255,0,0,0.05); border: 1px solid #ff4444; border-radius: 10px; padding: 16px; color: #ff9999; font-family: 'Courier New', monospace; min-height: 80px;"></div>
                     </div>
                 </div>
             </div>
@@ -1132,6 +1388,6 @@
         </div>
     </div>
     
-    <script src="static/script.js"></script>
+    <script src="static/logic.js"></script>
 </body>
 </html>

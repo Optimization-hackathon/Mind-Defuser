@@ -19,6 +19,27 @@ let bombState = {
     isActive: false
 };
 
+// INTERACTIVE MANUAL STATE
+let manualState = {
+    currentPage: 0,
+    totalPages: 2,
+    selectedAnswers: new Set(),
+    correctAnswers: new Map([
+        ['Paris', 'wireModule'],
+        ['12', 'keypadModule'],
+        ['Blue', 'colorModule'],
+        ['80', 'dialModule'],
+        ['Jupiter', 'wireModule'],
+        ['6', 'keypadModule']
+    ]),
+    moduleMappings: {
+        'wireModule': 'Wire Cutting Module',
+        'keypadModule': 'Symbol Keypad Module',
+        'colorModule': 'Color Match Module',
+        'dialModule': 'Rotary Dial Module'
+    }
+};
+
 // SUBJECT LIST BY GRADE
 const subjectsByGrade = {
     "Grade 1": ["Turkish", "Mathematics", "Life Science", "Music"],
@@ -209,7 +230,7 @@ function logoutStudent() {
 
 // ============ GAME FUNCTIONS ============
 async function startGame() {
-    const difficulty = document.getElementById('gameDifficulty').value;
+    const difficulty = currentStudent.grade; // Use grade instead of difficulty level
     const subject = document.getElementById('gameSubject').value;
     const moduleCount = parseInt(document.getElementById('moduleCount').value, 10);
     
@@ -488,4 +509,152 @@ function updateProgressDisplay() {
         const masteredTopics = topics.slice(0, mastered);
         document.getElementById('topicsList').textContent = masteredTopics.length > 0 ? masteredTopics.join(', ') : 'No topics mastered yet';
     }
+}
+
+// ============ INTERACTIVE MANUAL FUNCTIONS ============
+
+function flipPage(direction) {
+    const newPage = manualState.currentPage + direction;
+    
+    if (newPage >= 0 && newPage < manualState.totalPages) {
+        manualState.currentPage = newPage;
+        updateManualDisplay();
+    }
+}
+
+function updateManualDisplay() {
+    const manualPages = document.getElementById('manualPages');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    
+    // Update page visibility
+    const pages = manualPages.querySelectorAll('.manual-page');
+    pages.forEach((page, index) => {
+        if (index === manualState.currentPage * 2 || index === manualState.currentPage * 2 + 1) {
+            page.style.display = 'block';
+        } else {
+            page.style.display = 'none';
+        }
+    });
+    
+    // Update navigation buttons
+    prevBtn.style.opacity = manualState.currentPage === 0 ? '0.3' : '1';
+    nextBtn.style.opacity = manualState.currentPage === manualState.totalPages - 1 ? '0.3' : '1';
+}
+
+function selectAnswer(answerElement, answer) {
+    // Remove previous selection from this question
+    const question = answerElement.parentElement;
+    const previousSelection = question.querySelector('.selected');
+    if (previousSelection) {
+        previousSelection.classList.remove('selected');
+        manualState.selectedAnswers.delete(previousSelection.textContent.trim());
+    }
+    
+    // Add new selection
+    answerElement.classList.add('selected');
+    manualState.selectedAnswers.add(answer);
+    
+    // Check if answer is correct and activate corresponding module
+    if (manualState.correctAnswers.has(answer)) {
+        const moduleId = manualState.correctAnswers.get(answer);
+        activateModule(moduleId);
+        
+        // Visual feedback
+        answerElement.style.backgroundColor = '#00ff00';
+        answerElement.style.color = '#000';
+        
+        // Show success message
+        showModuleActivation(moduleId);
+    } else {
+        // Wrong answer feedback
+        answerElement.style.backgroundColor = '#ff0000';
+        answerElement.style.color = '#fff';
+        
+        setTimeout(() => {
+            answerElement.style.backgroundColor = '';
+            answerElement.style.color = '';
+        }, 1000);
+    }
+}
+
+function activateModule(moduleId) {
+    const module = document.getElementById(moduleId);
+    if (module) {
+        // Change LED to green
+        const redLed = module.querySelector('.led-red');
+        const greenLed = module.querySelector('.led-green');
+        
+        if (redLed) redLed.style.backgroundColor = '#333';
+        if (greenLed) greenLed.style.backgroundColor = '#00ff00';
+        
+        // Add activation effect
+        module.style.borderColor = '#00ff00';
+        module.style.boxShadow = '0 0 20px rgba(0, 255, 0, 0.8)';
+        
+        // Make module interactive
+        module.classList.add('activated');
+    }
+}
+
+function showModuleActivation(moduleId) {
+    const moduleName = manualState.moduleMappings[moduleId] || 'Module';
+    const notification = document.createElement('div');
+    notification.className = 'module-notification';
+    notification.textContent = `${moduleName} Activated!`;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 2000);
+}
+
+function handleAbortClick() {
+    if (confirm('Are you sure you want to abort the defusal? This will end the game.')) {
+        clearInterval(bombState.timerInterval);
+        bombState.isActive = false;
+        
+        // Reset all modules
+        resetBombModules();
+        
+        // Show game over screen
+        document.getElementById('game').classList.remove('active');
+        document.getElementById('mainInterface').classList.add('active');
+        
+        alert('Bomb defusal aborted. Better luck next time!');
+    }
+}
+
+function resetBombModules() {
+    // Reset all LEDs
+    const leds = document.querySelectorAll('.led');
+    leds.forEach(led => {
+        if (led.classList.contains('led-red')) {
+            led.style.backgroundColor = '#ff0000';
+        } else if (led.classList.contains('led-green')) {
+            led.style.backgroundColor = '#333';
+        }
+    });
+    
+    // Reset module styles
+    const modules = document.querySelectorAll('.module');
+    modules.forEach(module => {
+        module.style.borderColor = '';
+        module.style.boxShadow = '';
+        module.classList.remove('activated');
+    });
+    
+    // Reset manual state
+    manualState.selectedAnswers.clear();
+    manualState.currentPage = 0;
+    updateManualDisplay();
+    
+    // Reset answer selections
+    const selectedAnswers = document.querySelectorAll('.question-answer.selected');
+    selectedAnswers.forEach(answer => {
+        answer.classList.remove('selected');
+        answer.style.backgroundColor = '';
+        answer.style.color = '';
+    });
 }
