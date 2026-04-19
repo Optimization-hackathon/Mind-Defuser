@@ -19,8 +19,8 @@ const questionsConfig = [
   {
     id: 'wireModule',
     title: 'Module 2: Kablolar',
-    question: 'Hangi kablo su formülüne göre doğru seçenektir?',
-    instructions: 'Red: CO, Blue: CO2, Yellow: H2O, Green: H2. Doğru kabloyu seç.',
+    question: 'Su bileşiğinin formülü hangisidir?',
+    instructions: 'Doğru seçeneğin rengindeki kabloyu bombadan imha et.',
     type: 'choice',
     options: ['Red', 'Blue', 'Yellow', 'Green'],
     correct: 'Yellow',
@@ -187,6 +187,10 @@ function startGame() {
   document.getElementById('game').classList.add('active');
   document.getElementById('play')?.classList.add('active');
   startBombTimer();
+  // Unlock modules that don't need manual answers
+  moduleState.wireModule.unlocked = true;
+  moduleState.keypadModule.unlocked = true;
+  moduleState.colorModule.unlocked = true;
   updateManualDisplay();
   updateStatusPanel();
   addAIMessage('Bomb modules are ready. Read the manual and solve each module.');
@@ -205,6 +209,10 @@ function resetGameState() {
   Object.keys(moduleState).forEach((moduleId) => {
     moduleState[moduleId].solved = false;
     moduleState[moduleId].unlocked = false;
+  });
+  // Reset wire visibility
+  document.querySelectorAll('#wireModule .wire').forEach((wire) => {
+    wire.style.display = '';
   });
   updateTimerDisplay();
   updateStatusPanel();
@@ -277,32 +285,80 @@ function updateManualDisplay() {
   if (!pageContent || !pageNumber) return;
   const current = getCurrentManualPage();
   pageContent.innerHTML = '';
+  
+  // Display as plain text without buttons
   const title = document.createElement('div');
   title.className = 'question-number';
   title.textContent = current.title;
+  
   const question = document.createElement('div');
   question.className = 'question-text';
-  question.style.marginBottom = '10px';
+  question.style.marginBottom = '15px';
   question.textContent = current.question;
+  
   const instructions = document.createElement('div');
-  instructions.className = 'question-answer';
-  instructions.style.background = 'rgba(0,0,0,0.05)';
-  instructions.style.cursor = 'default';
-  instructions.style.borderColor = '#999';
+  instructions.className = 'question-text';
+  instructions.style.marginBottom = '15px';
   instructions.textContent = current.instructions;
+  
   pageContent.appendChild(title);
   pageContent.appendChild(question);
   pageContent.appendChild(instructions);
-  if (current.type === 'choice' || current.type === 'symbol') {
-    current.options.forEach((option) => {
-      const answerBox = document.createElement('div');
-      answerBox.className = 'question-answer';
-      answerBox.textContent = option;
-      answerBox.style.marginTop = '8px';
-      answerBox.onclick = () => completeManualPage(option);
-      pageContent.appendChild(answerBox);
-    });
+  
+  // For wire module, show formatted options
+  if (current.id === 'wireModule') {
+    const optionsText = document.createElement('div');
+    optionsText.className = 'question-text';
+    optionsText.style.fontSize = '16px';
+    optionsText.style.lineHeight = '1.6';
+    optionsText.innerHTML = `
+      <div style="margin: 10px 0;">
+        🔴 Kırmızı: CO &nbsp;&nbsp;|&nbsp;&nbsp; 🔵 Mavi: CO2<br>
+        🟡 Sarı: H2O &nbsp;&nbsp;|&nbsp;&nbsp; 🟢 Yeşil: H2
+      </div>
+      <div style="margin-top: 15px; font-weight: bold; color: #8b4513;">
+        Talimat: Doğru seçeneğin rengindeki kabloyu bombadan imha et.
+      </div>
+    `;
+    pageContent.appendChild(optionsText);
   }
+  
+  // For keypad module, show symbols
+  if (current.id === 'keypadModule') {
+    const optionsText = document.createElement('div');
+    optionsText.className = 'question-text';
+    optionsText.style.fontSize = '16px';
+    optionsText.style.lineHeight = '1.6';
+    optionsText.innerHTML = `
+      <div style="margin: 10px 0;">
+        Semboller: Σ, Ψ, Ω, ξ
+      </div>
+      <div style="margin-top: 15px; font-weight: bold; color: #8b4513;">
+        Talimat: Doğru sembolü tuş takımında seç.
+      </div>
+    `;
+    pageContent.appendChild(optionsText);
+  }
+  
+  // For color module, show colors
+  if (current.id === 'colorModule') {
+    const optionsText = document.createElement('div');
+    optionsText.className = 'question-text';
+    optionsText.style.fontSize = '16px';
+    optionsText.style.lineHeight = '1.6';
+    optionsText.innerHTML = `
+      <div style="margin: 10px 0;">
+        🔴 Kırmızı: 3 &nbsp;&nbsp;|&nbsp;&nbsp; 🔵 Mavi: 1<br>
+        🟢 Yeşil: 4 &nbsp;&nbsp;|&nbsp;&nbsp; 🟡 Sarı: 2
+      </div>
+      <div style="margin-top: 15px; font-weight: bold; color: #8b4513;">
+        Talimat: Doğru renge bas.
+      </div>
+    `;
+    pageContent.appendChild(optionsText);
+  }
+  
+  // For modules that need input (button and dial)
   if (current.type === 'input' || current.type === 'dial') {
     const input = document.createElement('input');
     input.type = 'text';
@@ -336,6 +392,7 @@ function updateManualDisplay() {
     pageContent.appendChild(button);
     pageContent.appendChild(hint);
   }
+  
   if (moduleState[current.id].solved) {
     const solvedBadge = document.createElement('div');
     solvedBadge.textContent = '✓ Module solved';
@@ -346,6 +403,7 @@ function updateManualDisplay() {
     solvedBadge.style.borderRadius = '8px';
     pageContent.appendChild(solvedBadge);
   }
+  
   if (current.type === 'dial' && moduleState[current.id].unlocked && !moduleState[current.id].solved) {
     const hidden = document.createElement('div');
     hidden.textContent = 'Hidden moves: 3 Right, 2 Left';
@@ -354,6 +412,7 @@ function updateManualDisplay() {
     hidden.style.fontWeight = 'bold';
     pageContent.appendChild(hidden);
   }
+  
   pageNumber.textContent = `Page ${manualState.currentPage + 1} / ${manualState.totalPages}`;
   toggleManualControls();
   updateStatusPanel();
@@ -445,6 +504,11 @@ function handleWireCut(color) {
     ? currentPage.correct.toLowerCase()
     : manualPages.find((page) => page.id === 'wireModule').correct.toLowerCase();
   if (color.toLowerCase() === expected) {
+    // Hide the wire by setting display to none
+    const wireElement = document.querySelector(`#wireModule .wire.${color}`);
+    if (wireElement) {
+      wireElement.style.display = 'none';
+    }
     moduleState.wireModule.solved = true;
     activateModule('wireModule');
     addAIMessage('Wire module solved!');
