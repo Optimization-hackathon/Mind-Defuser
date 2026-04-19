@@ -11,6 +11,14 @@ let studentStats = {
     accuracy: 0
 };
 
+// BOMB DEFUSAL DEVICE STATE
+let bombState = {
+    totalTime: 120, // 2 minutes
+    timeRemaining: 120,
+    timerInterval: null,
+    isActive: false
+};
+
 // SUBJECT LIST BY GRADE
 const subjectsByGrade = {
     "Grade 1": ["Turkish", "Mathematics", "Life Science", "Music"],
@@ -48,6 +56,87 @@ document.getElementById('playAgain').addEventListener('click', () => {
     document.getElementById('game').classList.remove('active');
     document.getElementById('mainInterface').classList.add('active');
 });
+
+// ============ BOMB DEFUSAL DEVICE FUNCTIONS ============
+
+function startBombTimer() {
+    bombState.isActive = true;
+    bombState.timeRemaining = bombState.totalTime;
+    
+    bombState.timerInterval = setInterval(() => {
+        bombState.timeRemaining--;
+        updateTimerDisplay();
+        
+        if (bombState.timeRemaining <= 0) {
+            bombExplosion();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const minutes = Math.floor(bombState.timeRemaining / 60);
+    const seconds = bombState.timeRemaining % 60;
+    const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    const timerDisplay = document.getElementById('timerDisplay');
+    
+    if (timerDisplay) {
+        timerDisplay.textContent = timeStr;
+        
+        // Color change based on urgency
+        if (bombState.timeRemaining <= 10) {
+            timerDisplay.style.color = '#ff0000';
+            timerDisplay.style.animation = 'blink 0.5s infinite';
+        } else if (bombState.timeRemaining <= 30) {
+            timerDisplay.style.color = '#ff6633';
+            timerDisplay.style.animation = 'blink 1s infinite';
+        }
+    }
+}
+
+function bombExplosion() {
+    clearInterval(bombState.timerInterval);
+    bombState.isActive = false;
+    
+    const timerDisplay = document.getElementById('timerDisplay');
+    if (timerDisplay) {
+        timerDisplay.textContent = '💥💥💥';
+        timerDisplay.style.color = '#ff0000';
+        timerDisplay.style.fontSize = '48px';
+    }
+    
+    alert('⚠️ TIME EXPIRED! 💣 BOMB EXPLODED! ⚠️\n\nYou must answer questions faster to defuse the bomb!');
+    backToMain();
+}
+
+function stopBombTimer() {
+    if (bombState.timerInterval) {
+        clearInterval(bombState.timerInterval);
+        bombState.isActive = false;
+    }
+}
+
+function handleAbortClick() {
+    alert('⚠️ ABORT SEQUENCE INITIATED!\n\nBomb defusal cancelled. Mission failed!');
+    stopBombTimer();
+    backToMain();
+}
+
+function updateModulesProgress() {
+    const moduleCount = questions.length;
+    const progress = ((currentQuestionIndex) / moduleCount) * 100;
+    
+    // Update visual representation if needed
+    const modules = document.querySelectorAll('.modules-grid .module:not(.timer-module):not(.abort-module)');
+    modules.forEach((module, index) => {
+        if (index < currentQuestionIndex) {
+            module.style.opacity = '0.5';
+            module.style.borderColor = '#00ff00';
+        } else if (index === currentQuestionIndex) {
+            module.style.borderColor = '#1e90ff';
+            module.style.boxShadow = '0 0 30px rgba(30, 144, 255, 0.8), inset 0 0 20px rgba(0, 0, 0, 0.7)';
+        }
+    });
+}
 
 // ============ LOGIN FUNCTIONS ============
 function loginStudent() {
@@ -154,6 +243,12 @@ async function startGame() {
         document.getElementById('play').classList.add('active');
         document.getElementById('dashboard').classList.remove('active');
         
+        // Start bomb timer
+        startBombTimer();
+        
+        // Initialize module progress display
+        updateModulesProgress();
+        
         showQuestion();
     } catch (error) {
         console.error('Error starting game:', error);
@@ -171,20 +266,14 @@ function showQuestion() {
     document.getElementById('answer').value = '';
     document.getElementById('result').textContent = '';
     startTime = Date.now();
-    updateModules();
+    
+    // Update bomb device modules progress
+    updateModulesProgress();
 }
 
 function updateModules() {
-    const modulesDiv = document.getElementById('modules');
-    modulesDiv.innerHTML = '';
-    for (let i = 0; i < questions.length; i++) {
-        const module = document.createElement('div');
-        module.className = 'module';
-        if (i < currentQuestionIndex) {
-            module.classList.add('defused');
-        }
-        modulesDiv.appendChild(module);
-    }
+    // This function is now integrated into updateModulesProgress()
+    updateModulesProgress();
 }
 
 function submitAnswer() {
@@ -211,6 +300,9 @@ function submitAnswer() {
 }
 
 async function endGame() {
+    // Stop bomb timer
+    stopBombTimer();
+    
     document.getElementById('play').classList.remove('active');
     document.getElementById('dashboard').classList.add('active');
     
@@ -293,7 +385,8 @@ async function endGame() {
         const feedbackMessages = [
             `✅ ${accuracy}% doğruluk oranı! ${accuracy >= 80 ? '🎉 Harika!' : accuracy >= 60 ? '👍 İyi gidiyor!' : '💪 Biraz daha çalışman gerek!'}`,
             `📊 ${data.accuracy ? (data.accuracy * 100).toFixed(0) : accuracy}% doğruluk ile senin seviyen: ${data.accuracy * 100 >= 70 ? 'İleri' : data.accuracy * 100 >= 50 ? 'Orta' : 'Başlangıç'}.`,
-            `💡 Gamspy AI sistem ${weakTopics.length} zayıf konu belirledi ve çalışma planı oluşturdu!`
+            `💡 Gamspy AI sistem ${weakTopics.length} zayıf konu belirledi ve çalışma planı oluşturdu!`,
+            `🤖 AI Tutor: ${data.feedback || 'Keep practicing!'}`
         ];
         
         feedbackMessages.forEach(msg => addAIMessage(msg));
@@ -308,6 +401,9 @@ async function endGame() {
 }
 
 function backToMain() {
+    // Stop bomb timer if running
+    stopBombTimer();
+    
     document.getElementById('game').classList.remove('active');
     document.getElementById('mainInterface').classList.add('active');
 }
@@ -323,22 +419,37 @@ function sendChatMessage() {
     addUserMessage(message);
     input.value = '';
     
-    // Simulate AI response (in real implementation, this would call an API)
-    setTimeout(() => {
-        const responses = [
-            "Bu soruyu çözmek için önce problemi dikkatli oku. Hangi matematik konsepti kullanılıyor?",
-            "Güzel soru! Bir önceki cevabını gözden geçir. Hesaplamalarında bir hata olmuş olabilir.",
-            "Devam et, seni çok iyi yapıyor görüyorum! Zorlanıyorsan, sorunun temel kavramını düşün.",
-            "Başka bir yaklaşım denemeye çalış. Resmi adım adım çız, yardımcı olabilir!",
-            "Mükemmel! Konsepti çok iyi anlamışsın. Daha karmaşık soruları dene!",
-            "Hata yapmak normal bir parça! Neden yanlış olduğunu anlamaya çalış, bu önemli.",
-            "Bu konuda iyi ilerliyorsun. Pratik yapıp pratik yap, her şey zamanla gelecek!",
-            "Eğer takılıyorsan, temel adımları gözden geçirmeyi dene. Bazen basit şeyler atlanabiliyor."
-        ];
+    // Show typing indicator
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'chat-message ai-message typing';
+    typingDiv.textContent = '🤖 AI Tutor yazıyor...';
+    document.getElementById('chatMessages').appendChild(typingDiv);
+    
+    // Call AI chat API
+    fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            message: message,
+            student_id: currentStudent ? currentStudent.name : 'unknown'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Remove typing indicator
+        typingDiv.remove();
         
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-        addAIMessage(randomResponse);
-    }, 800);
+        // Add AI response
+        addAIMessage(data.response || 'Üzgünüm, şu anda yanıt veremiyorum.');
+    })
+    .catch(error => {
+        console.error('Chat API error:', error);
+        // Remove typing indicator
+        typingDiv.remove();
+        
+        // Fallback response
+        addAIMessage('Üzgünüm, şu anda yanıt veremiyorum. Lütfen tekrar dene.');
+    });
 }
 
 function addUserMessage(message) {

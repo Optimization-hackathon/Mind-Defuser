@@ -3,12 +3,17 @@ import json
 import os
 import random
 import io
+from openai import OpenAI
+from flask import request, jsonify
 from datetime import datetime, timedelta
 import gamspy as gp
 import numpy as np
 from collections import defaultdict
+import openai
 
 app = Flask(__name__)
+
+
 
 # Load questions from a JSON file
 QUESTIONS_FILE = 'questions.json'
@@ -33,6 +38,44 @@ def load_student_performance():
 def save_student_performance(data):
     with open(STUDENT_PERFORMANCE_FILE, 'w') as f:
         json.dump(data, f, indent=4)
+
+def get_ai_feedback(weak_topics, correct_answers, wrong_answers, total_time):
+    """
+    Generate personalized AI feedback using OpenAI API.
+    """
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        return "Keep practicing your weak topics and try again!"
+    
+    client = openai.OpenAI(api_key=api_key)
+    
+    # Convert total_time to minutes for readability
+    time_minutes = total_time / 60 if total_time > 60 else total_time
+    time_unit = "seconds" if total_time <= 60 else "minutes"
+    
+    prompt = f"""You are a helpful tutor.
+
+Student performance:
+- Weak topics: {', '.join(weak_topics) if weak_topics else 'None'}
+- Correct answers: {correct_answers}
+- Wrong answers: {wrong_answers}
+- Time spent: {time_minutes:.1f} {time_unit}
+
+Give personalized study advice and explain what the student should focus on.
+Keep it short and motivating."""
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",  # Using gpt-3.5-turbo as gpt-5.3 doesn't exist
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=150,
+            temperature=0.7
+        )
+        feedback = response.choices[0].message.content.strip()
+        return feedback
+    except Exception as e:
+        print(f"OpenAI API error: {e}")
+        return "Keep practicing your weak topics and try again!"
 
 # Initialize with some sample questions if not exist
 if not os.path.exists(QUESTIONS_FILE):
@@ -183,14 +226,75 @@ def submit_session():
     
     score = calculate_score(answers)
     
+    # Generate AI feedback
+    weak_topics = list(mistake_topics.keys())
+    correct_answers = correct
+    wrong_answers = len(mistakes)
+    total_time = sum(a['time'] for a in answers)
+    feedback = get_ai_feedback(weak_topics, correct_answers, wrong_answers, total_time)
+    
     return jsonify({
         "score": score,
         "accuracy": accuracy,
         "mistakes": len(mistakes),
         "mistake_topics": mistake_topics,
         "study_plan": study_plan,
-        "repetition_schedule": repetition_schedule
+        "repetition_schedule": repetition_schedule,
+        "feedback": feedback
     })
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """
+    AI-powered chat endpoint using OpenAI API
+    """
+    data = request.json
+    user_message = data.get('message', '')
+    student_id = data.get('student_id', 'unknown')
+    
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
+    
+    # Get student's performance context
+    perf = student_performance.get(student_id, {})
+    accuracy = perf.get('accuracy', 0.5)
+    
+    # Create context-aware prompt
+    prompt = f"""You are a helpful math tutor for a gamified learning app called Mind Defuser.
+
+Student Context:
+- Current accuracy: {accuracy * 100:.1f}%
+- Student message: "{user_message}"
+
+Provide helpful, encouraging guidance about math concepts. Keep responses concise and student-friendly.
+If they ask about specific math problems, guide them step-by-step without giving direct answers.
+Focus on building understanding and confidence."""
+
+    try:
+        client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.7
+        )
+        ai_response = response.choices[0].message.content.strip()
+        return jsonify({"response": ai_response})
+    except Exception as e:
+        print(f"OpenAI Chat API error: {e}")
+        # Fallback responses
+        fallbacks = [
+            "Bu soruyu çözmek için önce problemi dikkatli oku. Hangi matematik konsepti kullanılıyor?",
+            "Güzel soru! Bir önceki cevabını gözden geçir. Hesaplamalarında bir hata olmuş olabilir.",
+            "Devam et, seni çok iyi yapıyor görüyorum! Zorlanıyorsan, sorunun temel kavramını düşün.",
+            "Başka bir yaklaşım denemeye çalış. Resmi adım adım çiz, yardımcı olabilir!",
+            "Mükemmel! Konsepti çok iyi anlamışsın. Daha karmaşık soruları dene!",
+            "Hata yapmak normal bir parça! Neden yanlış olduğunu anlamaya çalış, bu önemli.",
+            "Bu konuda iyi ilerliyorsun. Pratik yapıp pratik yap, her şey zamanla gelecek!",
+            "Eğer takılıyorsan, temel adımları gözden geçirmeyi dene. Bazen basit şeyler atlanabiliyor."
+        ]
+        import random
+        return jsonify({"response": random.choice(fallbacks)})
 
 def calculate_score(answers):
     correct = sum(1 for a in answers if a['correct'])
