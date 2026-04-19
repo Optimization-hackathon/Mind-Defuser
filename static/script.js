@@ -461,47 +461,42 @@ function backToMain() {
 }
 
 // ============ CHAT FUNCTIONS ============
-function sendChatMessage() {
+async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
     
     if (!message) return;
     
-    // Add user message to chat
     addUserMessage(message);
     input.value = '';
-    
-    // Show typing indicator
-    const typingDiv = document.createElement('div');
-    typingDiv.className = 'chat-message ai-message typing';
-    typingDiv.textContent = '🤖 AI Tutor yazıyor...';
-    document.getElementById('chatMessages').appendChild(typingDiv);
-    
-    // Call AI chat API
-    fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            message: message,
-            student_id: currentStudent ? currentStudent.name : 'unknown'
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Remove typing indicator
-        typingDiv.remove();
-        
-        // Add AI response
-        addAIMessage(data.response || 'Üzgünüm, şu anda yanıt veremiyorum.');
-    })
-    .catch(error => {
-        console.error('Chat API error:', error);
-        // Remove typing indicator
-        typingDiv.remove();
-        
-        // Fallback response
-        addAIMessage('Üzgünüm, şu anda yanıt veremiyorum. Lütfen tekrar dene.');
-    });
+    addAIMessage('AI yanıtı hazırlanıyor...');
+
+    try {
+        const response = await fetch('/ai', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prompt: message })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'AI yanıtı alınamadı.');
+        }
+
+        const chatMessages = document.getElementById('chatMessages');
+        const pendingMessages = chatMessages.querySelectorAll('.ai-message');
+        const lastPending = pendingMessages[pendingMessages.length - 1];
+        if (lastPending && lastPending.textContent === 'AI yanıtı hazırlanıyor...') {
+            lastPending.textContent = data.response;
+        } else {
+            addAIMessage(data.response);
+        }
+    } catch (error) {
+        console.error('Chat error:', error);
+        addAIMessage('Üzgünüm, AI asistanına bağlanırken bir sorun oldu. Lütfen tekrar dene.');
+    }
 }
 
 function addUserMessage(message) {

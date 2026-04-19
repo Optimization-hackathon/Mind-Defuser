@@ -3,17 +3,20 @@ import json
 import os
 import random
 import io
-from openai import OpenAI
-from flask import request, jsonify
 from datetime import datetime, timedelta
-# import gamspy as gp
-# import numpy as np
+from dotenv import load_dotenv
+from groq import Groq
+import gamspy as gp
+import numpy as np
 from collections import defaultdict
-import openai
+
+load_dotenv()
 
 app = Flask(__name__)
 
-
+client = Groq(
+    api_key=os.getenv("GROQ_API_KEY")
+)
 
 # Load questions from a JSON file
 QUESTIONS_FILE = 'questions.json'
@@ -137,6 +140,35 @@ def catch_all(path):
 @app.route('/static/<path:path>')
 def static_files(path):
     return send_from_directory('static', path)
+
+@app.route('/ai', methods=['POST'])
+def ai_chat():
+    data = request.json or {}
+    message = (data.get('message') or data.get('prompt') or '').strip()
+    if not message:
+        return jsonify({'error': 'Mesaj gönderilmedi.'}), 400
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an AI assistant inside a game. Be short, helpful, and interactive."
+                },
+                {
+                    "role": "user",
+                    "content": message
+                }
+            ]
+        )
+
+        return jsonify({'response': response.choices[0].message.content})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 
 @app.route('/api/get_questions', methods=['POST'])
 def get_questions():
