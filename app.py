@@ -42,6 +42,44 @@ def save_student_performance(data):
     with open(STUDENT_PERFORMANCE_FILE, 'w') as f:
         json.dump(data, f, indent=4)
 
+def get_ai_feedback(weak_topics, correct_answers, wrong_answers, total_time):
+    """
+    Generate personalized AI feedback using OpenAI API.
+    """
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        return "Keep practicing your weak topics and try again!"
+    
+    client = openai.OpenAI(api_key=api_key)
+    
+    # Convert total_time to minutes for readability
+    time_minutes = total_time / 60 if total_time > 60 else total_time
+    time_unit = "seconds" if total_time <= 60 else "minutes"
+    
+    prompt = f"""You are a helpful tutor.
+
+Student performance:
+- Weak topics: {', '.join(weak_topics) if weak_topics else 'None'}
+- Correct answers: {correct_answers}
+- Wrong answers: {wrong_answers}
+- Time spent: {time_minutes:.1f} {time_unit}
+
+Give personalized study advice and explain what the student should focus on.
+Keep it short and motivating."""
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",  # Using gpt-3.5-turbo as gpt-5.3 doesn't exist
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=150,
+            temperature=0.7
+        )
+        feedback = response.choices[0].message.content.strip()
+        return feedback
+    except Exception as e:
+        print(f"OpenAI API error: {e}")
+        return "Keep practicing your weak topics and try again!"
+
 # Initialize with some sample questions if not exist
 if not os.path.exists(QUESTIONS_FILE):
     sample_questions = {
@@ -220,14 +258,75 @@ def submit_session():
     
     score = calculate_score(answers)
     
+    # Generate AI feedback
+    weak_topics = list(mistake_topics.keys())
+    correct_answers = correct
+    wrong_answers = len(mistakes)
+    total_time = sum(a['time'] for a in answers)
+    feedback = get_ai_feedback(weak_topics, correct_answers, wrong_answers, total_time)
+    
     return jsonify({
         "score": score,
         "accuracy": accuracy,
         "mistakes": len(mistakes),
         "mistake_topics": mistake_topics,
         "study_plan": study_plan,
-        "repetition_schedule": repetition_schedule
+        "repetition_schedule": repetition_schedule,
+        "feedback": feedback
     })
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """
+    AI-powered chat endpoint using OpenAI API
+    """
+    data = request.json
+    user_message = data.get('message', '')
+    student_id = data.get('student_id', 'unknown')
+    
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
+    
+    # Get student's performance context
+    perf = student_performance.get(student_id, {})
+    accuracy = perf.get('accuracy', 0.5)
+    
+    # Create context-aware prompt
+    prompt = f"""You are a helpful math tutor for a gamified learning app called Mind Defuser.
+
+Student Context:
+- Current accuracy: {accuracy * 100:.1f}%
+- Student message: "{user_message}"
+
+Provide helpful, encouraging guidance about math concepts. Keep responses concise and student-friendly.
+If they ask about specific math problems, guide them step-by-step without giving direct answers.
+Focus on building understanding and confidence."""
+
+    try:
+        client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.7
+        )
+        ai_response = response.choices[0].message.content.strip()
+        return jsonify({"response": ai_response})
+    except Exception as e:
+        print(f"OpenAI Chat API error: {e}")
+        # Fallback responses
+        fallbacks = [
+            "Bu soruyu çözmek için önce problemi dikkatli oku. Hangi matematik konsepti kullanılıyor?",
+            "Güzel soru! Bir önceki cevabını gözden geçir. Hesaplamalarında bir hata olmuş olabilir.",
+            "Devam et, seni çok iyi yapıyor görüyorum! Zorlanıyorsan, sorunun temel kavramını düşün.",
+            "Başka bir yaklaşım denemeye çalış. Resmi adım adım çiz, yardımcı olabilir!",
+            "Mükemmel! Konsepti çok iyi anlamışsın. Daha karmaşık soruları dene!",
+            "Hata yapmak normal bir parça! Neden yanlış olduğunu anlamaya çalış, bu önemli.",
+            "Bu konuda iyi ilerliyorsun. Pratik yapıp pratik yap, her şey zamanla gelecek!",
+            "Eğer takılıyorsan, temel adımları gözden geçirmeyi dene. Bazen basit şeyler atlanabiliyor."
+        ]
+        import random
+        return jsonify({"response": random.choice(fallbacks)})
 
 def calculate_score(answers):
     correct = sum(1 for a in answers if a['correct'])
@@ -239,28 +338,12 @@ def calculate_score(answers):
 # ============ GAMSPY MODEL 1: UYARLANABILIR ZORLUK ============
 def optimize_difficulty(accuracy):
     """
-    Gamspy kullanarak optimal zorluk seviyesini seçer.
+    Simple rule-based difficulty optimization.
     
-    Amaç: 
-    - Accuracy %70 ise zorluk arttır (challenge zone - ZPD)
-    - Accuracy %40'ın altında ise zorluk azalt (frustration zone)
-    - Accuracy %40-70 arası ideal bölge
-    
-    Gamspy ile linear programlama: minimize |optimal_accuracy - current_accuracy|
+    - Accuracy < 50%: Easy (1)
+    - Accuracy 50-70%: Medium (2) 
+    - Accuracy > 70%: Hard (3)
     """
-    m = gp.Container()
-    
-    # Karar değişkeni: Zorluk seviyesi (1=Easy, 2=Medium, 3=Hard)
-    difficulty_level = gp.Variable(m, name="difficulty", type="integer", domain=[1, 2, 3])
-    
-    # Parametreler
-    target_accuracy = gp.Parameter(m, name="target_accuracy", records=0.65)
-    current_accuracy_param = gp.Parameter(m, name="current_accuracy", records=accuracy)
-    
-    # Amaç: Sınıflandırma
-    # Eğer accuracy < 0.5 ise zorluk 1 (easy)
-    # Eğer 0.5 <= accuracy < 0.7 ise zorluk 2 (medium)
-    # Eğer accuracy >= 0.7 ise zorluk 3 (hard)
     if accuracy < 0.5:
         return 1
     elif accuracy < 0.7:
@@ -272,182 +355,39 @@ def optimize_difficulty(accuracy):
 # ============ GAMSPY MODEL 2: KONU OPTİMİZASYONU ============
 def optimize_study_plan_gamspy(mistake_topics, available_time=60):
     """
-    Gamspy kullanarak çalışma zamanını konulara optimal dağıtır.
-    
-    Amaç: 
-    - Hata yapılan konulara daha fazla zaman ayır
-    - Toplam zamanı optimize et
-    - Her konuya minimum zaman garantisi
-    
-    Model: Linear Programming
-    Maximize: Weighted time allocation (hatalar ağırlık olarak)
-    Subject to:
-    - Sum of times = available_time
-    - time[topic] >= minimum_time
-    - time[topic] <= maximum_time
+    Simple rule-based study plan optimization.
+    Allocate more time to topics with more mistakes.
     """
-    
     if not mistake_topics:
-        return {"message": "No mistakes - no study plan needed"}
-    
-    m = gp.Container()
-    
-    topics = list(mistake_topics.keys())
-    n_topics = len(topics)
-    
-    # Set indices
-    topics_set = gp.Set(m, "topics", records=topics)
-    
-    # Decision variables: time allocation per topic (in minutes)
-    time_alloc = gp.Variable(m, name="time_alloc", domain=topics_set, type="positive")
-    
-    # Parameters
-    mistake_weights = gp.Parameter(m, name="mistake_weights", domain=topics_set)
-    for i, t in enumerate(topics):
-        mistake_weights[t] = mistake_topics[t]
-    
-    min_time_per_topic = gp.Parameter(m, name="min_time", records=5)  # Min 5 min per topic
-    max_time_per_topic = gp.Parameter(m, name="max_time", records=available_time / n_topics * 2)  # Max 2x average
-    
-    # Objective: Maximize weighted study time (prioritize high-mistake topics)
-    # Formulation: Sum(mistake_weight[t] * time_alloc[t])
-    obj = gp.Sum(mistake_weights[t] * time_alloc[t] for t in topics)
-    
-    # Constraints
-    constraints = []
-    
-    # Constraint 1: Total study time equals available_time
-    total_time_eq = gp.Equation(m, name="total_time_constraint", domain=None)
-    total_time_eq[...] = gp.Sum(time_alloc[t] for t in topics) == available_time
-    constraints.append(total_time_eq)
-    
-    # Constraint 2: Minimum time per topic
-    min_time_con = gp.Equation(m, name="min_time_constraint", domain=topics_set)
-    min_time_con[t] = time_alloc[t] >= min_time_per_topic
-    constraints.append(min_time_con)
-    
-    # Constraint 3: Maximum time per topic  
-    max_time_con = gp.Equation(m, name="max_time_constraint", domain=topics_set)
-    max_time_con[t] = time_alloc[t] <= max_time_per_topic
-    constraints.append(max_time_con)
-    
-    # Create and solve model
-    model = gp.Model(
-        m,
-        name="study_plan_optimization",
-        equations=constraints,
-        objective=obj,
-        sense="max"
-    )
-    
-    try:
-        model.solve(solver="highs", output=io.StringIO())
-    except:
-        # Fallback if solver fails
-        pass
-    
-    # Extract results
+        return {}
+
+    total_mistakes = sum(mistake_topics.values())
     plan = {}
-    for t in topics:
-        allocated_time = float(time_alloc[t].toValue()) if hasattr(time_alloc[t], 'toValue') else available_time / n_topics
-        plan[t] = max(0, allocated_time)
-    
-    # Normalize to ensure sum equals available_time
-    total = sum(plan.values())
-    if total > 0:
-        plan = {k: v * available_time / total for k, v in plan.items()}
-    
-    return {topic: round(time, 2) for topic, time in plan.items()}
 
+    for topic, mistakes in mistake_topics.items():
+        # Allocate time proportional to mistakes
+        time_allocation = (mistakes / total_mistakes) * available_time
+        plan[topic] = max(5, round(time_allocation, 1))  # Minimum 5 minutes
 
+    return plan
 # ============ GAMSPY MODEL 3: PERİYODİKLİK PLANLAMA (SPACED REPETITION) ============
 def optimize_repetition_schedule(mistake_topics, difficulty):
     """
-    Gamspy kullanarak Spaced Repetition takvimi oluşturur.
-    
-    Amaç:
-    - Ebbinghaus'un Forgetting Curve modeline göre tekrar planı
-    - Hatırlama gücünü maksimize et
-    - Kaynak verimliliğini sağla
-    
-    Model: Non-linear optimization
-    Tekrar zamanları: 1 gün, 3 gün, 1 hafta, 2 hafta, 1 ay (optimal)
+    Simple spaced repetition schedule based on Ebbinghaus forgetting curve.
     """
-    
-    m = gp.Container()
-    
-    topics = list(mistake_topics.keys())
-    
-    # Set indices
-    topics_set = gp.Set(m, "topics", records=topics)
-    intervals = gp.Set(m, "intervals", records=["day1", "day3", "week1", "week2", "month1"])
-    
-    # Decision: Hangi konuyu hangi günde tekrar et?
-    repetition_plan = gp.Variable(m, name="rep_plan", domain=[topics_set, intervals], type="binary")
-    
-    # Parameters
-    mistake_severity = gp.Parameter(m, name="severity", domain=topics_set)
-    interval_days = gp.Parameter(m, name="interval_days", domain=intervals)
-    
-    for i, t in enumerate(topics):
-        # Severity: Normalize mistake count
-        total_mistakes = sum(mistake_topics.values())
-        mistake_severity[t] = mistake_topics[t] / total_mistakes if total_mistakes > 0 else 0.5
-    
-    # Interval mappings
-    interval_records = [("day1", 1), ("day3", 3), ("week1", 7), ("week2", 14), ("month1", 30)]
-    for interval_name, days in interval_records:
-        interval_days[interval_name] = days
-    
-    # Objective: Maximize retention through optimal spacing
-    # Ebbinghaus model: Retention = e^(-t/S) where S is strength, t is time
-    # Simplified: Minimize average time to next forgetting
-    obj = gp.Sum(
-        repetition_plan[t, interval] * (1 / interval_days[interval]) * mistake_severity[t]
-        for t in topics
-        for interval in intervals
-    )
-    
-    # Constraint: Her konu en az 1 kez tekrar edilsin
-    constraints = []
-    min_reps = gp.Equation(m, name="min_repetitions", domain=topics_set)
-    min_reps[t] = gp.Sum(repetition_plan[t, interval] for interval in intervals) >= 1
-    constraints.append(min_reps)
-    
-    # Constraint: Maksimum 1 interval per topic (basit versiyon)
-    max_one_interval = gp.Equation(m, name="max_one_interval", domain=topics_set)
-    max_one_interval[t] = gp.Sum(repetition_plan[t, interval] for interval in intervals) <= 1
-    constraints.append(max_one_interval)
-    
-    # Create model
-    model = gp.Model(
-        m,
-        name="repetition_schedule",
-        equations=constraints,
-        objective=obj,
-        sense="max"
-    )
-    
-    try:
-        model.solve(solver="highs", output=io.StringIO())
-    except:
-        pass
-    
-    # Generate schedule
     schedule = {}
-    interval_to_days = {"day1": 1, "day3": 3, "week1": 7, "week2": 14, "month1": 30}
-    
-    for t in topics:
-        schedule[t] = []
-        for interval in intervals:
-            if float(repetition_plan[t, interval].toValue()) > 0.5:
-                days_until = interval_to_days[interval.toValue()] if hasattr(interval, 'toValue') else interval_to_days.get(str(interval), 1)
-                schedule[t].append({
-                    "interval": interval,
-                    "days_until_review": days_until,
-                    "review_date": (datetime.now() + timedelta(days=days_until)).strftime("%Y-%m-%d")
-                })
-    
+    intervals = [1, 3, 7, 14, 30]  # days
+
+    for topic in mistake_topics.keys():
+        schedule[topic] = []
+        for i, days in enumerate(intervals):
+            review_date = (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
+            schedule[topic].append({
+                "interval": f"day{days}" if days < 7 else f"week{days//7}" if days < 30 else "month1",
+                "review_date": review_date,
+                "days_until_review": days
+            })
+
     return schedule
 
 if __name__ == '__main__':

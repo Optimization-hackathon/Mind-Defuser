@@ -250,30 +250,834 @@
         
         /* GAME SCREEN */
         #game {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             display: none;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0e27 0%, #16213e 50%, #0f3460 100%);
+            padding: 20px;
+            overflow-y: auto;
         }
         
         #game.active { display: block; }
-        
-        #bomb { font-size: 50px; margin: 20px; text-align: center; }
-        .module { display: inline-block; width: 100px; height: 100px; background: red; margin: 10px; border-radius: 50%; cursor: pointer; }
-        .defused { background: green; }
-        #question { font-size: 24px; margin: 20px; }
-        #answer { width: 200px; padding: 10px; font-size: 18px; }
-        #submit { padding: 10px 20px; font-size: 18px; }
-        #result { margin: 20px; font-size: 20px; }
         
         #play { display: none; }
         #play.active { display: block; }
         
         #dashboard { display: none; }
         #dashboard.active { display: block; }
+        
+        /* BACK BUTTON */
+        .back-button-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        
+        #backToMainBtn {
+            padding: 12px 20px;
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            border: 2px solid #ff6b6b;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        
+        #backToMainBtn:hover {
+            background: rgba(255, 107, 107, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+        }
+        
+        /* BOMB DEFUSAL DEVICE - MAIN CONTAINER */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .bomb-header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+        
+        .bomb-header h1 {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 0;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+            animation: pulse 2s infinite;
+        }
+        
+        .bomb-header p {
+            font-size: 18px;
+            color: #ff6b6b;
+            margin: 10px 0 0 0;
+            letter-spacing: 2px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { text-shadow: 0 0 20px rgba(255, 107, 107, 0.8); }
+            50% { text-shadow: 0 0 40px rgba(255, 107, 107, 1); }
+        }
+        
+        /* BOMB DEVICE - MAIN CHASSIS */
+        .bomb-device {
+            width: 90%;
+            max-width: 1000px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border: 3px solid #2d3561;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 
+                0 0 60px rgba(255, 107, 107, 0.5),
+                0 0 100px rgba(30, 144, 255, 0.3),
+                inset 0 0 40px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+        
+        /* METALLIC EDGE EFFECT */
+        .bomb-device::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            background: linear-gradient(45deg, #444, #222, #444);
+            border-radius: 20px;
+            z-index: -1;
+        }
+        
+        /* SCREWS ON CORNERS */
+        .bomb-device::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 20px;
+            background-image: 
+                radial-gradient(circle 8px at 30px 30px, rgba(100, 100, 100, 0.6), transparent 8px),
+                radial-gradient(circle 8px at calc(100% - 30px) 30px, rgba(100, 100, 100, 0.6), transparent 8px),
+                radial-gradient(circle 8px at 30px calc(100% - 30px), rgba(100, 100, 100, 0.6), transparent 8px),
+                radial-gradient(circle 8px at calc(100% - 30px) calc(100% - 30px), rgba(100, 100, 100, 0.6), transparent 8px);
+            background-repeat: no-repeat;
+            pointer-events: none;
+        }
+        
+        /* MODULES GRID - 2x3 */
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        /* INDIVIDUAL MODULE */
+        .module {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #1e1e3f 0%, #2a2a5a 50%, #1a1a3a 100%);
+            border: 2px solid #3d3d6b;
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                inset 0 0 20px rgba(0, 0, 0, 0.7),
+                0 0 15px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .module:hover {
+            border-color: #1e90ff;
+            box-shadow: 
+                inset 0 0 20px rgba(0, 0, 0, 0.7),
+                0 0 20px rgba(30, 144, 255, 0.6),
+                0 0 40px rgba(30, 144, 255, 0.3);
+            transform: translateY(-5px);
+        }
+        
+        .module:active {
+            transform: translateY(-3px);
+        }
+        
+        .module-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(30, 144, 255, 0.03) 0px,
+                rgba(30, 144, 255, 0.03) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+        
+        /* MODULE CONTENT */
+        .module-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .module-icon {
+            font-size: 50px;
+            margin-bottom: 10px;
+        }
+        
+        .module-title {
+            color: #1e90ff;
+            font-weight: bold;
+            font-size: 14px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .module-label {
+            color: #00ff00;
+            font-size: 12px;
+            margin-top: 8px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* LED INDICATORS */
+        .led {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 10px currentColor;
+            animation: blink 1.5s infinite;
+        }
+        
+        .led-red {
+            background: #ff3333;
+            color: #ff3333;
+            top: 15px;
+            right: 15px;
+        }
+        
+        .led-green {
+            background: #00ff00;
+            color: #00ff00;
+            top: 15px;
+            left: 15px;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        /* TIMER MODULE - SPECIAL */
+        .module.timer-module {
+            grid-column: 1 / 2;
+            background: linear-gradient(135deg, #2d0000 0%, #4d0000 50%, #2d0000 100%);
+            border-color: #ff3333;
+        }
+        
+        .timer-display {
+            font-size: 56px;
+            font-weight: bold;
+            color: #ff3333;
+            font-family: 'Courier New', monospace;
+            text-shadow: 
+                0 0 10px #ff3333,
+                0 0 20px #ff0000;
+            letter-spacing: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .timer-label {
+            color: #ffaa00;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+        
+        /* ABORT BUTTON MODULE */
+        .module.abort-module {
+            grid-column: 3;
+            background: linear-gradient(135deg, #3a0000 0%, #6b0000 50%, #3a0000 100%);
+            border-color: #ff4444;
+        }
+        
+        .abort-button-inner {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #ff3333, #ff0000);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 
+                0 10px 30px rgba(255, 0, 0, 0.6),
+                inset -5px -5px 15px rgba(0, 0, 0, 0.4),
+                inset 5px 5px 15px rgba(255, 100, 100, 0.3);
+            transition: all 0.2s;
+            border: 3px solid #cc0000;
+        }
+        
+        .abort-button-inner:hover {
+            box-shadow: 
+                0 15px 40px rgba(255, 0, 0, 0.8),
+                inset -5px -5px 15px rgba(0, 0, 0, 0.4),
+                inset 5px 5px 15px rgba(255, 100, 100, 0.5);
+            transform: scale(1.05);
+        }
+        
+        .abort-button-inner:active {
+            transform: scale(0.95);
+        }
+        
+        .abort-text {
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+        }
+        
+        /* WIRE CUTTING MODULE */
+        .wires-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+        }
+        
+        .wire {
+            width: 3px;
+            height: 80%;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .wire.red { background: linear-gradient(180deg, #ff0000 0%, #cc0000 100%); }
+        .wire.blue { background: linear-gradient(180deg, #0000ff 0%, #0000cc 100%); }
+        .wire.green { background: linear-gradient(180deg, #00ff00 0%, #00cc00 100%); }
+        .wire.yellow { background: linear-gradient(180deg, #ffff00 0%, #cccc00 100%); }
+        .wire.black { background: linear-gradient(180deg, #333333 0%, #000000 100%); }
+        .wire.white { background: linear-gradient(180deg, #ffffff 0%, #cccccc 100%); }
+        
+        .wire::before {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: currentColor;
+            border-radius: 50%;
+            left: -5px;
+            top: -6px;
+            box-shadow: 0 0 8px currentColor;
+        }
+        
+        .wire:hover {
+            opacity: 0.8;
+            filter: brightness(1.3);
+        }
+        
+        /* SYMBOL KEYPAD MODULE */
+        .keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .key {
+            background: linear-gradient(135deg, #1e5f3c 0%, #0a3a22 100%);
+            border: 2px solid #00aa44;
+            border-radius: 8px;
+            color: #00ff66;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 100, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .key:hover {
+            background: linear-gradient(135deg, #2a7a50 0%, #115533 100%);
+            box-shadow: 0 0 15px rgba(0, 255, 100, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        /* COLOR MATCH MODULE */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .color-square {
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .color-square:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .red-square { background: linear-gradient(135deg, #ff3333 0%, #cc0000 100%); }
+        .blue-square { background: linear-gradient(135deg, #3333ff 0%, #0000cc 100%); }
+        .yellow-square { background: linear-gradient(135deg, #ffff33 0%, #cccc00 100%); }
+        .green-square { background: linear-gradient(135deg, #33ff33 0%, #00cc00 100%); }
+        
+        /* ROTARY DIAL MODULE */
+        .rotary-dial {
+            width: 100px;
+            height: 100px;
+            border: 3px solid #00aaff;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #0088ff, #003366);
+            position: relative;
+            cursor: pointer;
+            box-shadow: 
+                inset 0 2px 10px rgba(0, 0, 0, 0.7),
+                0 0 20px rgba(0, 170, 255, 0.5);
+            transition: all 0.3s;
+        }
+        
+        .rotary-dial:hover {
+            box-shadow: 
+                inset 0 2px 10px rgba(0, 0, 0, 0.7),
+                0 0 30px rgba(0, 170, 255, 0.8);
+        }
+        
+        .rotary-pointer {
+            position: absolute;
+            width: 3px;
+            height: 30px;
+            background: #00ff00;
+            left: 50%;
+            top: 10px;
+            transform: translateX(-50%);
+            transform-origin: center 45px;
+            border-radius: 2px;
+        }
+        
+        /* MEMORY GAME MODULE */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .memory-tile {
+            background: linear-gradient(135deg, #1a4a6b 0%, #0d2942 100%);
+            border: 2px solid #00ccff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(0, 204, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #00ccff;
+            font-weight: bold;
+        }
+        
+        .memory-tile:hover {
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        /* SWITCH/LEVER MODULE */
+        .switch-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .switch {
+            width: 50px;
+            height: 90px;
+            background: linear-gradient(135deg, #2a2a4a 0%, #1a1a3a 100%);
+            border: 2px solid #666;
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .switch-lever {
+            width: 40px;
+            height: 35px;
+            background: linear-gradient(135deg, #444 0%, #222 100%);
+            border-radius: 6px;
+            position: absolute;
+            left: 5px;
+            top: 50%;
+            transform: translateY(-50%) rotate(0deg);
+            transform-origin: center;
+            transition: all 0.3s;
+            border: 1px solid #888;
+        }
+        
+        .switch:hover .switch-lever {
+            box-shadow: 0 0 10px rgba(0, 255, 100, 0.4);
+        }
+        
+        /* CODE INPUT MODULE */
+        .code-display {
+            background: #000;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            padding: 10px;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 20px;
+            letter-spacing: 5px;
+            margin-bottom: 10px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 0 10px #00ff00;
+            box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.2);
+        }
+        
+        .code-keys {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            width: 100%;
+        }
+        
+        .code-key {
+            background: linear-gradient(135deg, #1a5a1a 0%, #0d3a0d 100%);
+            border: 1px solid #00aa00;
+            border-radius: 5px;
+            color: #00ff00;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            padding: 8px;
+        }
+        
+        .code-key:hover {
+            background: linear-gradient(135deg, #2a7a2a 0%, #1a5a1a 100%);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        
+        /* BOTTOM INFO PANEL */
+        .bottom-info {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #00aa00;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: center;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+        
+        .bottom-info h3 {
+            color: #00ffff;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .bottom-info p {
+            color: #00ff00;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        /* INTERACTIVE MANUAL / BOOKLET */
+        .manual-container {
+            width: 90%;
+            max-width: 1200px;
+            position: relative;
+            margin-top: 20px;
+        }
+        
+        .manual-book {
+            width: 100%;
+            height: 400px;
+            position: relative;
+            perspective: 1500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .manual-pages {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s;
+        }
+        
+        .manual-page {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(135deg, #f5f5f0 0%, #e8e8e0 50%, #d5d5c0 100%);
+            border: 2px solid #8b4513;
+            box-shadow: 
+                0 0 20px rgba(0, 0, 0, 0.3),
+                inset 0 0 30px rgba(139, 69, 19, 0.1);
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            font-family: 'Times New Roman', serif;
+            color: #2c1810;
+            overflow-y: auto;
+        }
+        
+        .manual-page.left-page {
+            left: 0;
+            border-right: 1px solid #654321;
+            border-radius: 10px 0 0 10px;
+            transform-origin: right center;
+        }
+        
+        .manual-page.right-page {
+            right: 0;
+            border-left: 1px solid #654321;
+            border-radius: 0 10px 10px 0;
+            transform-origin: left center;
+        }
+        
+        .manual-page-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .manual-question {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid #8b4513;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .question-number {
+            font-weight: bold;
+            color: #8b4513;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .question-text {
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+        
+        .question-answer {
+            background: #f0f8ff;
+            border: 1px solid #4682b4;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #2e4a62;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .question-answer:hover {
+            background: #e6f3ff;
+            box-shadow: 0 0 10px rgba(70, 130, 180, 0.3);
+        }
+        
+        .question-answer.completed {
+            background: #e8f5e8;
+            border-color: #32cd32;
+            color: #228b22;
+        }
+        
+        .manual-page-number {
+            position: absolute;
+            bottom: 15px;
+            right: 20px;
+            font-size: 12px;
+            color: #654321;
+            font-style: italic;
+        }
+        
+        .manual-page-number.left {
+            right: auto;
+            left: 20px;
+        }
+        
+        /* PAGE FLIPPING CONTROLS */
+        .page-controls {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 20px;
+            pointer-events: none;
+        }
+        
+        .page-control {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #8b4513 0%, #654321 100%);
+            border: 2px solid #654321;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #f5f5f0;
+            transition: all 0.3s;
+            pointer-events: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .page-control:hover {
+            background: linear-gradient(135deg, #a0522d 0%, #8b4513 100%);
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .page-control:active {
+            transform: scale(0.95);
+        }
+        
+        .page-control.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        /* MANUAL HEADER */
+        .manual-header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+        }
+        
+        .manual-header h2 {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+            letter-spacing: 2px;
+        }
+        
+        .manual-header p {
+            font-size: 14px;
+            color: #ff6b6b;
+            margin: 8px 0 0 0;
+            font-style: italic;
+        }
+        
+        /* QUESTION DISPLAY */
+        #question {
+            font-size: 20px;
+            margin: 20px;
+            color: #00ff00;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+        
+        #answer {
+            width: 300px;
+            padding: 12px;
+            font-size: 16px;
+            background: #1a1a3a;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 15px;
+            text-align: center;
+        }
+        
+        #answer:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.6);
+        }
+        
+        #submit {
+            padding: 12px 30px;
+            font-size: 16px;
+            background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 15px;
+        }
+        
+        #submit:hover {
+            background: linear-gradient(135deg, #00ff66 0%, #00dd00 100%);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        #result {
+            margin: 20px;
+            font-size: 18px;
+            color: #00ff00;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
         
         @media (max-width: 1200px) {
             .container {
@@ -285,6 +1089,50 @@
             .header {
                 grid-column: 1 !important;
             }
+        }
+        
+        /* MODULE ACTIVATION NOTIFICATIONS */
+        .module-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+            color: #000;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
+            z-index: 1000;
+            animation: notificationPulse 2s ease-in-out;
+            border: 3px solid #00aa00;
+        }
+        
+        @keyframes notificationPulse {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            80% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+        }
+        
+        /* SELECTED ANSWER STYLES */
+        .question-answer.selected {
+            background: #4169e1 !important;
+            color: #fff !important;
+            border-color: #0000ff !important;
+            box-shadow: 0 0 15px rgba(65, 105, 225, 0.6) !important;
+        }
+        
+        /* ACTIVATED MODULE STYLES */
+        .module.activated {
+            animation: moduleActivated 0.5s ease-in-out;
+        }
+        
+        @keyframes moduleActivated {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -402,28 +1250,144 @@
         </div>
     </div>
     
-    <!-- GAME SCREEN -->
+    <!-- GAME SCREEN - BOMB DEFUSAL DEVICE -->
     <div id="game">
-        <button style="margin-bottom: 10px;" id="backToMainBtn">← Back to Main</button>
-        <h1>🎮 Mind Defuser</h1>
-        <div id="play">
-            <div id="bomb">💣</div>
-            <div id="modules"></div>
-            <div id="question"></div>
-            <input type="text" id="answer" placeholder="Your answer">
-            <button id="submit">Submit</button>
-            <div id="result"></div>
+        <div class="back-button-container">
+            <button id="backToMainBtn">← Back to Main</button>
         </div>
-        <div id="dashboard">
-            <h2>Post-Game Dashboard</h2>
-            <p id="score"></p>
-            <p id="mistakes"></p>
-            <p id="weak_topics"></p>
-            <p id="study_plan"></p>
-            <button id="playAgain">Play Again</button>
+        
+        <div id="play">
+            <div class="game-container">
+                <!-- HEADER -->
+                <div class="bomb-header">
+                    <h1>💣 BOMB DEFUSAL DEVICE 💣</h1>
+                    <p>⚠️ HAZARD - EXPLOSIVES ⚠️</p>
+                </div>
+                
+                <!-- BOMB DEVICE MAIN CHASSIS -->
+                <div class="bomb-device">
+                    <!-- MODULES GRID 2x3 -->
+                    <div class="modules-grid">
+                        <!-- MODULE 1: TIMER -->
+                        <div class="module timer-module">
+                            <div class="led led-red"></div>
+                            <div class="led led-green"></div>
+                            <div class="module-overlay"></div>
+                            <div class="module-content">
+                                <div class="timer-display" id="timerDisplay">00:59</div>
+                                <div class="timer-label">TIME REMAINING</div>
+                            </div>
+                        </div>
+                        
+                        <!-- MODULE 2: WIRE CUTTING -->
+                        <div class="module" id="wireModule">
+                            <div class="led led-green"></div>
+                            <div class="module-overlay"></div>
+                            <div class="module-content">
+                                <div class="wires-container">
+                                    <div class="wire red"></div>
+                                    <div class="wire blue"></div>
+                                    <div class="wire green"></div>
+                                    <div class="wire yellow"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- MODULE 3: RED BUTTON -->
+                        <div class="module abort-module" id="buttonModule">
+                            <div class="led led-red"></div>
+                            <div class="led led-green"></div>
+                            <div class="module-overlay"></div>
+                            <div class="abort-button-inner" id="redActionButton">
+                                <div class="abort-text" id="redButtonLabel">HOLD</div>
+                            </div>
+                            <div id="redButtonStatus" style="margin-top: 12px; color: #fff; font-size: 14px; text-align: center;">Hold until the key digit appears in the timer.</div>
+                        </div>
+                        
+                        <!-- MODULE 4: SYMBOL KEYPAD -->
+                        <div class="module" id="keypadModule">
+                            <div class="led led-green"></div>
+                            <div class="module-overlay"></div>
+                            <div class="module-content">
+                                <div class="keypad-grid">
+                                    <div class="key">Σ</div>
+                                    <div class="key">Ψ</div>
+                                    <div class="key">Ω</div>
+                                    <div class="key">ξ</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- MODULE 5: ROTARY DIAL -->
+                        <div class="module" id="dialModule">
+                            <div class="led led-green"></div>
+                            <div class="module-overlay"></div>
+                            <div class="module-content" style="gap: 18px;">
+                                <div class="rotary-dial">
+                                    <div class="rotary-pointer" id="rotaryPointer"></div>
+                                </div>
+                                <div id="dialInstruction" style="color: #00ff99; font-size: 14px;">Enter the manual answer and reveal the hidden dial moves.</div>
+                                <div id="dialControls" style="display: flex; gap: 12px; justify-content: center; width: 100%;">
+                                    <button class="start-btn" id="dialLeft" style="background: #1e90ff; width: 100px;">◄ Left</button>
+                                    <button class="start-btn" id="dialRight" style="background: #1e90ff; width: 100px;">Right ►</button>
+                                </div>
+                                <div id="dialStatus" style="font-size: 14px; color: #fff;">Dial moves remaining: 5</div>
+                            </div>
+                        </div>
+                        
+                        <!-- MODULE 6: COLOR MATCH -->
+                        <div class="module" id="colorModule">
+                            <div class="led led-green"></div>
+                            <div class="module-overlay"></div>
+                            <div class="module-content">
+                                <div class="color-grid">
+                                    <div class="color-square red-square"></div>
+                                    <div class="color-square blue-square"></div>
+                                    <div class="color-square yellow-square"></div>
+                                    <div class="color-square green-square"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- INTERACTIVE MANUAL / BOOKLET -->
+                <div class="manual-container">
+                    <div class="manual-header">
+                        <h2>📖 BOMB DEFUSAL MANUAL</h2>
+                        <p>Use arrow keys or the buttons to turn pages. Each page has one module instruction.</p>
+                    </div>
+                    <div class="manual-book">
+                        <div class="page-controls">
+                            <div class="page-control" id="prevPage" onclick="flipPage(-1)">‹</div>
+                            <div class="page-control" id="nextPage" onclick="flipPage(1)">›</div>
+                        </div>
+                        <div class="manual-pages" id="manualPages">
+                            <div class="manual-page left-page">
+                                <div class="manual-page-content" id="manualPageContent"></div>
+                                <div class="manual-page-number" id="manualPageNumber"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="manual-status" style="margin-top: 20px; display: grid; gap: 12px;">
+                        <div id="moduleStatus" style="background: rgba(0,0,0,0.6); border: 1px solid #00ff00; border-radius: 10px; padding: 16px; color: #00ff99; font-family: 'Courier New', monospace;"></div>
+                        <div id="errorLog" style="background: rgba(255,0,0,0.05); border: 1px solid #ff4444; border-radius: 10px; padding: 16px; color: #ff9999; font-family: 'Courier New', monospace; min-height: 80px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- DASHBOARD SCREEN -->
+        <div id="dashboard" style="display: none; color: white; text-align: center; padding: 40px;">
+            <h2 style="font-size: 36px; margin-bottom: 30px;">🎮 Mission Complete</h2>
+            <p id="score" style="font-size: 20px; margin: 15px;"></p>
+            <p id="mistakes" style="font-size: 20px; margin: 15px;"></p>
+            <p id="weak_topics" style="font-size: 20px; margin: 15px;"></p>
+            <p id="study_plan" style="font-size: 18px; margin: 20px; background: rgba(0,255,0,0.1); padding: 15px; border-radius: 8px;"></p>
+            <button id="playAgain" style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 20px;">Play Again</button>
         </div>
     </div>
     
-    <script src="static/script.js"></script>
+    <script src="static/logic.js"></script>
 </body>
 </html>

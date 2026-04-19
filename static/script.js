@@ -11,6 +11,35 @@ let studentStats = {
     accuracy: 0
 };
 
+// BOMB DEFUSAL DEVICE STATE
+let bombState = {
+    totalTime: 120, // 2 minutes
+    timeRemaining: 120,
+    timerInterval: null,
+    isActive: false
+};
+
+// INTERACTIVE MANUAL STATE
+let manualState = {
+    currentPage: 0,
+    totalPages: 2,
+    selectedAnswers: new Set(),
+    correctAnswers: new Map([
+        ['Paris', 'wireModule'],
+        ['12', 'keypadModule'],
+        ['Blue', 'colorModule'],
+        ['80', 'dialModule'],
+        ['Jupiter', 'wireModule'],
+        ['6', 'keypadModule']
+    ]),
+    moduleMappings: {
+        'wireModule': 'Wire Cutting Module',
+        'keypadModule': 'Symbol Keypad Module',
+        'colorModule': 'Color Match Module',
+        'dialModule': 'Rotary Dial Module'
+    }
+};
+
 // SUBJECT LIST BY GRADE
 const subjectsByGrade = {
     "Grade 1": ["Turkish", "Mathematics", "Life Science", "Music"],
@@ -48,6 +77,87 @@ document.getElementById('playAgain').addEventListener('click', () => {
     document.getElementById('game').classList.remove('active');
     document.getElementById('mainInterface').classList.add('active');
 });
+
+// ============ BOMB DEFUSAL DEVICE FUNCTIONS ============
+
+function startBombTimer() {
+    bombState.isActive = true;
+    bombState.timeRemaining = bombState.totalTime;
+    
+    bombState.timerInterval = setInterval(() => {
+        bombState.timeRemaining--;
+        updateTimerDisplay();
+        
+        if (bombState.timeRemaining <= 0) {
+            bombExplosion();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const minutes = Math.floor(bombState.timeRemaining / 60);
+    const seconds = bombState.timeRemaining % 60;
+    const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    const timerDisplay = document.getElementById('timerDisplay');
+    
+    if (timerDisplay) {
+        timerDisplay.textContent = timeStr;
+        
+        // Color change based on urgency
+        if (bombState.timeRemaining <= 10) {
+            timerDisplay.style.color = '#ff0000';
+            timerDisplay.style.animation = 'blink 0.5s infinite';
+        } else if (bombState.timeRemaining <= 30) {
+            timerDisplay.style.color = '#ff6633';
+            timerDisplay.style.animation = 'blink 1s infinite';
+        }
+    }
+}
+
+function bombExplosion() {
+    clearInterval(bombState.timerInterval);
+    bombState.isActive = false;
+    
+    const timerDisplay = document.getElementById('timerDisplay');
+    if (timerDisplay) {
+        timerDisplay.textContent = '💥💥💥';
+        timerDisplay.style.color = '#ff0000';
+        timerDisplay.style.fontSize = '48px';
+    }
+    
+    alert('⚠️ TIME EXPIRED! 💣 BOMB EXPLODED! ⚠️\n\nYou must answer questions faster to defuse the bomb!');
+    backToMain();
+}
+
+function stopBombTimer() {
+    if (bombState.timerInterval) {
+        clearInterval(bombState.timerInterval);
+        bombState.isActive = false;
+    }
+}
+
+function handleAbortClick() {
+    alert('⚠️ ABORT SEQUENCE INITIATED!\n\nBomb defusal cancelled. Mission failed!');
+    stopBombTimer();
+    backToMain();
+}
+
+function updateModulesProgress() {
+    const moduleCount = questions.length;
+    const progress = ((currentQuestionIndex) / moduleCount) * 100;
+    
+    // Update visual representation if needed
+    const modules = document.querySelectorAll('.modules-grid .module:not(.timer-module):not(.abort-module)');
+    modules.forEach((module, index) => {
+        if (index < currentQuestionIndex) {
+            module.style.opacity = '0.5';
+            module.style.borderColor = '#00ff00';
+        } else if (index === currentQuestionIndex) {
+            module.style.borderColor = '#1e90ff';
+            module.style.boxShadow = '0 0 30px rgba(30, 144, 255, 0.8), inset 0 0 20px rgba(0, 0, 0, 0.7)';
+        }
+    });
+}
 
 // ============ LOGIN FUNCTIONS ============
 function loginStudent() {
@@ -120,7 +230,7 @@ function logoutStudent() {
 
 // ============ GAME FUNCTIONS ============
 async function startGame() {
-    const difficulty = document.getElementById('gameDifficulty').value;
+    const difficulty = currentStudent.grade; // Use grade instead of difficulty level
     const subject = document.getElementById('gameSubject').value;
     const moduleCount = parseInt(document.getElementById('moduleCount').value, 10);
     
@@ -154,6 +264,12 @@ async function startGame() {
         document.getElementById('play').classList.add('active');
         document.getElementById('dashboard').classList.remove('active');
         
+        // Start bomb timer
+        startBombTimer();
+        
+        // Initialize module progress display
+        updateModulesProgress();
+        
         showQuestion();
     } catch (error) {
         console.error('Error starting game:', error);
@@ -171,20 +287,14 @@ function showQuestion() {
     document.getElementById('answer').value = '';
     document.getElementById('result').textContent = '';
     startTime = Date.now();
-    updateModules();
+    
+    // Update bomb device modules progress
+    updateModulesProgress();
 }
 
 function updateModules() {
-    const modulesDiv = document.getElementById('modules');
-    modulesDiv.innerHTML = '';
-    for (let i = 0; i < questions.length; i++) {
-        const module = document.createElement('div');
-        module.className = 'module';
-        if (i < currentQuestionIndex) {
-            module.classList.add('defused');
-        }
-        modulesDiv.appendChild(module);
-    }
+    // This function is now integrated into updateModulesProgress()
+    updateModulesProgress();
 }
 
 function submitAnswer() {
@@ -211,6 +321,9 @@ function submitAnswer() {
 }
 
 async function endGame() {
+    // Stop bomb timer
+    stopBombTimer();
+    
     document.getElementById('play').classList.remove('active');
     document.getElementById('dashboard').classList.add('active');
     
@@ -293,7 +406,8 @@ async function endGame() {
         const feedbackMessages = [
             `✅ ${accuracy}% doğruluk oranı! ${accuracy >= 80 ? '🎉 Harika!' : accuracy >= 60 ? '👍 İyi gidiyor!' : '💪 Biraz daha çalışman gerek!'}`,
             `📊 ${data.accuracy ? (data.accuracy * 100).toFixed(0) : accuracy}% doğruluk ile senin seviyen: ${data.accuracy * 100 >= 70 ? 'İleri' : data.accuracy * 100 >= 50 ? 'Orta' : 'Başlangıç'}.`,
-            `💡 Gamspy AI sistem ${weakTopics.length} zayıf konu belirledi ve çalışma planı oluşturdu!`
+            `💡 Gamspy AI sistem ${weakTopics.length} zayıf konu belirledi ve çalışma planı oluşturdu!`,
+            `🤖 AI Tutor: ${data.feedback || 'Keep practicing!'}`
         ];
         
         feedbackMessages.forEach(msg => addAIMessage(msg));
@@ -308,6 +422,9 @@ async function endGame() {
 }
 
 function backToMain() {
+    // Stop bomb timer if running
+    stopBombTimer();
+    
     document.getElementById('game').classList.remove('active');
     document.getElementById('mainInterface').classList.add('active');
 }
@@ -387,4 +504,152 @@ function updateProgressDisplay() {
         const masteredTopics = topics.slice(0, mastered);
         document.getElementById('topicsList').textContent = masteredTopics.length > 0 ? masteredTopics.join(', ') : 'No topics mastered yet';
     }
+}
+
+// ============ INTERACTIVE MANUAL FUNCTIONS ============
+
+function flipPage(direction) {
+    const newPage = manualState.currentPage + direction;
+    
+    if (newPage >= 0 && newPage < manualState.totalPages) {
+        manualState.currentPage = newPage;
+        updateManualDisplay();
+    }
+}
+
+function updateManualDisplay() {
+    const manualPages = document.getElementById('manualPages');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    
+    // Update page visibility
+    const pages = manualPages.querySelectorAll('.manual-page');
+    pages.forEach((page, index) => {
+        if (index === manualState.currentPage * 2 || index === manualState.currentPage * 2 + 1) {
+            page.style.display = 'block';
+        } else {
+            page.style.display = 'none';
+        }
+    });
+    
+    // Update navigation buttons
+    prevBtn.style.opacity = manualState.currentPage === 0 ? '0.3' : '1';
+    nextBtn.style.opacity = manualState.currentPage === manualState.totalPages - 1 ? '0.3' : '1';
+}
+
+function selectAnswer(answerElement, answer) {
+    // Remove previous selection from this question
+    const question = answerElement.parentElement;
+    const previousSelection = question.querySelector('.selected');
+    if (previousSelection) {
+        previousSelection.classList.remove('selected');
+        manualState.selectedAnswers.delete(previousSelection.textContent.trim());
+    }
+    
+    // Add new selection
+    answerElement.classList.add('selected');
+    manualState.selectedAnswers.add(answer);
+    
+    // Check if answer is correct and activate corresponding module
+    if (manualState.correctAnswers.has(answer)) {
+        const moduleId = manualState.correctAnswers.get(answer);
+        activateModule(moduleId);
+        
+        // Visual feedback
+        answerElement.style.backgroundColor = '#00ff00';
+        answerElement.style.color = '#000';
+        
+        // Show success message
+        showModuleActivation(moduleId);
+    } else {
+        // Wrong answer feedback
+        answerElement.style.backgroundColor = '#ff0000';
+        answerElement.style.color = '#fff';
+        
+        setTimeout(() => {
+            answerElement.style.backgroundColor = '';
+            answerElement.style.color = '';
+        }, 1000);
+    }
+}
+
+function activateModule(moduleId) {
+    const module = document.getElementById(moduleId);
+    if (module) {
+        // Change LED to green
+        const redLed = module.querySelector('.led-red');
+        const greenLed = module.querySelector('.led-green');
+        
+        if (redLed) redLed.style.backgroundColor = '#333';
+        if (greenLed) greenLed.style.backgroundColor = '#00ff00';
+        
+        // Add activation effect
+        module.style.borderColor = '#00ff00';
+        module.style.boxShadow = '0 0 20px rgba(0, 255, 0, 0.8)';
+        
+        // Make module interactive
+        module.classList.add('activated');
+    }
+}
+
+function showModuleActivation(moduleId) {
+    const moduleName = manualState.moduleMappings[moduleId] || 'Module';
+    const notification = document.createElement('div');
+    notification.className = 'module-notification';
+    notification.textContent = `${moduleName} Activated!`;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 2000);
+}
+
+function handleAbortClick() {
+    if (confirm('Are you sure you want to abort the defusal? This will end the game.')) {
+        clearInterval(bombState.timerInterval);
+        bombState.isActive = false;
+        
+        // Reset all modules
+        resetBombModules();
+        
+        // Show game over screen
+        document.getElementById('game').classList.remove('active');
+        document.getElementById('mainInterface').classList.add('active');
+        
+        alert('Bomb defusal aborted. Better luck next time!');
+    }
+}
+
+function resetBombModules() {
+    // Reset all LEDs
+    const leds = document.querySelectorAll('.led');
+    leds.forEach(led => {
+        if (led.classList.contains('led-red')) {
+            led.style.backgroundColor = '#ff0000';
+        } else if (led.classList.contains('led-green')) {
+            led.style.backgroundColor = '#333';
+        }
+    });
+    
+    // Reset module styles
+    const modules = document.querySelectorAll('.module');
+    modules.forEach(module => {
+        module.style.borderColor = '';
+        module.style.boxShadow = '';
+        module.classList.remove('activated');
+    });
+    
+    // Reset manual state
+    manualState.selectedAnswers.clear();
+    manualState.currentPage = 0;
+    updateManualDisplay();
+    
+    // Reset answer selections
+    const selectedAnswers = document.querySelectorAll('.question-answer.selected');
+    selectedAnswers.forEach(answer => {
+        answer.classList.remove('selected');
+        answer.style.backgroundColor = '';
+        answer.style.color = '';
+    });
 }
